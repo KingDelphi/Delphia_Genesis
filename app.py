@@ -8,7 +8,7 @@ from PIL import Image
 import io
 
 # =============================================
-# TEMA VISUAL GENESIS v0.3
+# TEMA VISUAL GENESIS v0.4
 # =============================================
 def apply_genesis_theme():
     st.markdown("""
@@ -28,7 +28,7 @@ def apply_genesis_theme():
             border: 1px solid #00E5C0;
             border-radius: 12px;
             overflow: hidden;
-            height: 320px;
+            height: 325px;
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -36,7 +36,7 @@ def apply_genesis_theme():
         }
         .card-shell:hover {
             border-color: #F2C94C;
-            box-shadow: 0 0 30px rgba(242, 201, 76, 0.35);
+            box-shadow: 0 0 30px rgba(242, 201, 76, 0.4);
             transform: translateY(-6px);
         }
         .card-img-zone {
@@ -54,6 +54,7 @@ def apply_genesis_theme():
             text-align: center;
             padding: 8px 6px 4px;
             font-weight: 700;
+            line-height: 1.2;
         }
         .card-price {
             font-family: 'Cinzel', serif;
@@ -89,6 +90,12 @@ apply_genesis_theme()
 # =============================================
 # HELPERS
 # =============================================
+def clean_value(val):
+    """Limpia strings con comas para convertir a float"""
+    if isinstance(val, str):
+        return float(val.replace(',', '').replace(' ', ''))
+    return float(val)
+
 def generate_asset_id(name, sovereign):
     raw = f"{name}-{sovereign}-{pd.Timestamp.now().isoformat()}"
     return "GEN-" + hashlib.sha256(raw.encode()).hexdigest()[:8].upper()
@@ -117,7 +124,7 @@ def create_genesis_certificate(asset_name, asset_id, sovereign, value):
         ("CREATION", str(asset_name).upper()),
         ("GENESIS ID", str(asset_id)),
         ("YOUNG SOVEREIGN", str(sovereign).upper()),
-        ("VALUE", f"{float(value):,.0f} IMAGIX"),
+        ("IMAGINED VALUE", f"{int(clean_value(value)):,} IMAGIX"),
         ("DATE", "MAY 2026"),
         ("STATUS", "SACRED & IMMUTABLE"),
     ]
@@ -175,42 +182,53 @@ tab_vault, tab_quests, tab_market, tab_upload = st.tabs([
     "🌱 UPLOAD CREATION"
 ])
 
-# Vault
+# Vault v0.4
 with tab_vault:
     st.markdown("### 🌌 SOVEREIGN CREATIONS VAULT")
     cols = st.columns(5)
+    
     examples = [
-        ("Star Dragon", "48,200", "🐉"),
-        ("Kingdom of Clouds", "125,000", "☁️"),
-        ("Robot Best Friend", "32,800", "🤖"),
-        ("Enchanted Sword", "67,500", "⚔️"),
-        ("Family Castle", "89,000", "🏰"),
+        ("Star Dragon Awakening", "48200", "🐉"),
+        ("Kingdom of Eternal Clouds", "125000", "☁️"),
+        ("The Brave Robot Friend", "32800", "🤖"),
+        ("Legendary Enchanted Sword", "67500", "⚔️"),
+        ("My Family's Floating Castle", "89000", "🏰"),
     ]
-    for i, (name, value, emoji) in enumerate(examples):
+    
+    for i, (name, value_str, emoji) in enumerate(examples):
+        value = int(value_str)
         with cols[i % 5]:
             st.markdown(f"""
             <div class="card-shell">
                 <div class="card-img-zone"><span style="font-size:78px;">{emoji}</span></div>
                 <div class="card-title">{name}</div>
-                <div class="card-price">{value} 𝕀</div>
+                <div class="card-price">{value:,} 𝕀</div>
             </div>
             """, unsafe_allow_html=True)
+            
             col1, col2 = st.columns(2)
             if col1.button("📜 TITLE", key=f"title_{i}"):
                 pdf_bytes = create_genesis_certificate(name, generate_asset_id(name, user), user, value)
-                st.download_button("⬇️ Download Certificate", pdf_bytes, f"{name}_Certificate.pdf", "application/pdf", key=f"dl_{i}")
+                st.download_button(
+                    label="⬇️ Download Certificate",
+                    data=pdf_bytes,
+                    file_name=f"{name.replace(' ', '_')}_Certificate.pdf",
+                    mime="application/pdf",
+                    key=f"dl_{i}"
+                )
             if col2.button("🔀 SPLIT", key=f"split_{i}"):
-                st.info("Fractionalization coming in v0.4")
+                st.success(f"Split activated for {name} (Demo)")
 
 # Quests
 with tab_quests:
     st.markdown("### ⚔️ QUESTS & PROGRESS")
-    st.success("**Active Quest:** Design your Personal Kingdom Crest — **Reward: 15,000 𝕀**")
-    st.info("**Daily:** Create something new — **Reward: 2,500 𝕀**")
+    st.success("**Main Quest:** Design your Personal Kingdom Crest — **Reward: 15,000 𝕀**")
+    st.info("**Daily Quest:** Create one new piece — **Reward: 2,500 𝕀**")
+    st.progress(65, text="Progress to next rank: STAR I")
 
-# Marketplace & Upload (mantenemos simple por ahora)
+# Marketplace & Upload
 with tab_market:
-    st.info("🌠 Genesis Marketplace — Safe space for Young Sovereigns (v0.4)")
+    st.info("🌠 Genesis Marketplace — Safe trading for Young Sovereigns (v0.5)")
 
 with tab_upload:
     st.markdown("### 🌱 UPLOAD YOUR CREATION")
@@ -218,14 +236,14 @@ with tab_upload:
     file = st.file_uploader("Upload your art / story / craft", type=["jpg","png","pdf"])
     if st.button("🌟 REGISTER IN GENESIS", type="primary") and name and file:
         st.balloons()
-        st.success(f"**{name}** has been registered on the Genesis Layer!")
+        st.success(f"**{name}** has been successfully registered on the Genesis Layer!")
 
 # Sidebar
 with st.sidebar:
     st.markdown("### 🌟 GENESIS TERMINAL")
-    st.write(f"**Sovereign:** {user}")
-    st.write("**Rank:** Flame III")
+    st.write(f"**Young Sovereign:** {user}")
+    st.write("**Current Rank:** Flame III")
     st.write("**IMAGIX:** 248,750 𝕀")
-    st.caption("Delphia Genesis • Layer of Imagination")
+    st.caption("Delphia Genesis v0.4")
 
-st.caption("Delphia Genesis v0.3 — Where Imagination Becomes Sovereign")
+st.caption("Delphia Genesis v0.4 — Where Imagination Becomes Sovereign")
