@@ -4,11 +4,10 @@ import os
 import hashlib
 import tempfile
 from fpdf import FPDF
-from PIL import Image
-import io
+from datetime import datetime
 
 # =============================================
-# TEMA VISUAL GENESIS v0.4
+# TEMA VISUAL GENESIS v0.5
 # =============================================
 def apply_genesis_theme():
     st.markdown("""
@@ -63,42 +62,18 @@ def apply_genesis_theme():
             text-align: center;
             font-weight: 700;
         }
-        .stButton > button {
-            background-color: #112B4D !important;
-            color: #F2C94C !important;
-            border: 1px solid #00E5C0 !important;
-            font-family: 'Space Grotesk', sans-serif !important;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            transition: all 0.25s ease;
-        }
-        .stButton > button:hover {
-            background-color: #1E3A6B !important;
-            border-color: #F2C94C !important;
-            color: white !important;
-        }
         </style>
     """, unsafe_allow_html=True)
 
-st.set_page_config(
-    page_title="DELPHIA GENESIS | IMAGINARIUM",
-    page_icon="🌟",
-    layout="wide"
-)
+st.set_page_config(page_title="DELPHIA GENESIS | IMAGINARIUM", page_icon="🌟", layout="wide")
 apply_genesis_theme()
 
 # =============================================
-# HELPERS
+# HELPERS (PDF FIXED)
 # =============================================
-def clean_value(val):
-    """Limpia strings con comas para convertir a float"""
-    if isinstance(val, str):
-        return float(val.replace(',', '').replace(' ', ''))
-    return float(val)
-
-def generate_asset_id(name, sovereign):
-    raw = f"{name}-{sovereign}-{pd.Timestamp.now().isoformat()}"
-    return "GEN-" + hashlib.sha256(raw.encode()).hexdigest()[:8].upper()
+def safe_text(text):
+    """Limpia texto para evitar errores de encoding en fpdf"""
+    return str(text).encode('latin-1', errors='replace').decode('latin-1')
 
 def create_genesis_certificate(asset_name, asset_id, sovereign, value):
     pdf = FPDF(orientation='P', unit='mm', format='A4')
@@ -121,10 +96,10 @@ def create_genesis_certificate(asset_name, asset_id, sovereign, value):
     pdf.cell(0, 35, "★", ln=1, align="C")
     
     fields = [
-        ("CREATION", str(asset_name).upper()),
-        ("GENESIS ID", str(asset_id)),
-        ("YOUNG SOVEREIGN", str(sovereign).upper()),
-        ("IMAGINED VALUE", f"{int(clean_value(value)):,} IMAGIX"),
+        ("CREATION", safe_text(asset_name).upper()),
+        ("GENESIS ID", safe_text(asset_id)),
+        ("YOUNG SOVEREIGN", safe_text(sovereign).upper()),
+        ("IMAGINED VALUE", f"{int(value):,} IMAGIX"),
         ("DATE", "MAY 2026"),
         ("STATUS", "SACRED & IMMUTABLE"),
     ]
@@ -141,9 +116,21 @@ def create_genesis_certificate(asset_name, asset_id, sovereign, value):
         pdf.cell(150, 12, val)
         y += 32
     
-    pdf.output("genesis_certificate.pdf")
-    with open("genesis_certificate.pdf", "rb") as f:
-        return f.read()
+    # Usamos nombre temporal único para evitar conflictos
+    temp_file = f"cert_{hashlib.md5(asset_id.encode()).hexdigest()[:8]}.pdf"
+    pdf.output(temp_file)
+    with open(temp_file, "rb") as f:
+        pdf_bytes = f.read()
+    # Limpiar archivo temporal
+    try:
+        os.remove(temp_file)
+    except:
+        pass
+    return pdf_bytes
+
+def generate_asset_id(name, sovereign):
+    raw = f"{name}-{sovereign}-{datetime.now().isoformat()}"
+    return "GEN-" + hashlib.sha256(raw.encode()).hexdigest()[:8].upper()
 
 # =============================================
 # SESIÓN
@@ -182,21 +169,18 @@ tab_vault, tab_quests, tab_market, tab_upload = st.tabs([
     "🌱 UPLOAD CREATION"
 ])
 
-# Vault v0.4
 with tab_vault:
     st.markdown("### 🌌 SOVEREIGN CREATIONS VAULT")
     cols = st.columns(5)
-    
     examples = [
-        ("Star Dragon Awakening", "48200", "🐉"),
-        ("Kingdom of Eternal Clouds", "125000", "☁️"),
-        ("The Brave Robot Friend", "32800", "🤖"),
-        ("Legendary Enchanted Sword", "67500", "⚔️"),
-        ("My Family's Floating Castle", "89000", "🏰"),
+        ("Star Dragon Awakening", 48200, "🐉"),
+        ("Kingdom of Eternal Clouds", 125000, "☁️"),
+        ("The Brave Robot Friend", 32800, "🤖"),
+        ("Legendary Enchanted Sword", 67500, "⚔️"),
+        ("My Family's Floating Castle", 89000, "🏰"),
     ]
     
-    for i, (name, value_str, emoji) in enumerate(examples):
-        value = int(value_str)
+    for i, (name, value, emoji) in enumerate(examples):
         with cols[i % 5]:
             st.markdown(f"""
             <div class="card-shell">
@@ -212,23 +196,21 @@ with tab_vault:
                 st.download_button(
                     label="⬇️ Download Certificate",
                     data=pdf_bytes,
-                    file_name=f"{name.replace(' ', '_')}_Certificate.pdf",
+                    file_name=f"{name.replace(' ', '_')}_Genesis_Certificate.pdf",
                     mime="application/pdf",
                     key=f"dl_{i}"
                 )
             if col2.button("🔀 SPLIT", key=f"split_{i}"):
-                st.success(f"Split activated for {name} (Demo)")
+                st.success(f"**Split activated** for {name} — Fractional ownership enabled (Demo)")
 
-# Quests
 with tab_quests:
     st.markdown("### ⚔️ QUESTS & PROGRESS")
     st.success("**Main Quest:** Design your Personal Kingdom Crest — **Reward: 15,000 𝕀**")
-    st.info("**Daily Quest:** Create one new piece — **Reward: 2,500 𝕀**")
-    st.progress(65, text="Progress to next rank: STAR I")
+    st.info("**Daily Quest:** Create something new — **Reward: 2,500 𝕀**")
+    st.progress(65, text="Progress to STAR I")
 
-# Marketplace & Upload
 with tab_market:
-    st.info("🌠 Genesis Marketplace — Safe trading for Young Sovereigns (v0.5)")
+    st.info("🌠 Genesis Marketplace — Safe trading coming in v0.6")
 
 with tab_upload:
     st.markdown("### 🌱 UPLOAD YOUR CREATION")
@@ -236,14 +218,12 @@ with tab_upload:
     file = st.file_uploader("Upload your art / story / craft", type=["jpg","png","pdf"])
     if st.button("🌟 REGISTER IN GENESIS", type="primary") and name and file:
         st.balloons()
-        st.success(f"**{name}** has been successfully registered on the Genesis Layer!")
+        st.success(f"**{name}** registered successfully on the Genesis Layer!")
 
-# Sidebar
 with st.sidebar:
     st.markdown("### 🌟 GENESIS TERMINAL")
     st.write(f"**Young Sovereign:** {user}")
-    st.write("**Current Rank:** Flame III")
+    st.write("**Rank:** Flame III")
     st.write("**IMAGIX:** 248,750 𝕀")
-    st.caption("Delphia Genesis v0.4")
 
-st.caption("Delphia Genesis v0.4 — Where Imagination Becomes Sovereign")
+st.caption("Delphia Genesis v0.5 — Where Imagination Becomes Sovereign")
