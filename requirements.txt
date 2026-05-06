@@ -1,16 +1,20 @@
-# ══════════════════════════════════════════════════
-# DELPHIA GENESIS v0.6 — requirements.txt
-# Tested on Streamlit Community Cloud (Python 3.11)
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════
+# DELPHIA GENESIS v0.7 — requirements.txt
+# Tested target: Streamlit Community Cloud · Python 3.11
+# ══════════════════════════════════════════════════════════
 
-# Core framework
+# ── Core framework ──────────────────────────────────────
 streamlit>=1.35.0
 
-# Data persistence
+# ── Data persistence ────────────────────────────────────
 pandas>=2.0.0
 
-# PDF generation — robust, unicode-safe (replaces fpdf)
+# ── PDF generation (unicode-safe, no temp files) ────────
 reportlab>=4.2.0
 
-# Image handling (thumbnails in vault)
+# ── Image processing (thumbnails + card images) ─────────
 pillow>=10.0.0
+
+# ── Note: no other deps needed.
+# ── numpy is pulled in automatically by pandas.
+# ── hashlib, io, math, base64, pathlib are stdlib.
