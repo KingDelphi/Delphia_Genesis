@@ -803,7 +803,7 @@ def make_certificate(name, asset_id, sovereign, value):
 
 
 # ══════════════════════════════════════════════════════════════
-# ⑨ SESSION STATE
+# ⑨ SESSION STATE (mover antes de cualquier lógica)
 # ══════════════════════════════════════════════════════════════
 _DEFAULTS={
     "authenticated":False,"user":"","imagix":0,
@@ -814,7 +814,8 @@ _DEFAULTS={
     "active_tab":"vault","market_refresh":False,
 }
 for k,v in _DEFAULTS.items():
-    if k not in st.session_state: st.session_state[k]=v
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 
 # ══════════════════════════════════════════════════════════════
@@ -896,28 +897,29 @@ if not st.session_state["authenticated"]:
 
 
 # ══════════════════════════════════════════════════════════════
-# ⑪ MAIN APP
+# ⑪ MAIN APP — Solo después de autenticación
 # ══════════════════════════════════════════════════════════════
-user:str=st.session_state["user"]
+user: str = st.session_state["user"]
 ensure_dirs(user)
 
+# Cargar datos solo si ya estamos autenticados
 if st.session_state["creations_df"] is None:
-    st.session_state["creations_df"]=load_creations()
+    st.session_state["creations_df"] = load_creations()
 
-df_all:pd.DataFrame=st.session_state["creations_df"]
-user_df=df_all[df_all["sovereign"]==user].copy() if not df_all.empty and "sovereign" in df_all.columns else pd.DataFrame(columns=CREATION_COLS)
+df_all: pd.DataFrame = st.session_state["creations_df"]
+user_df = df_all[df_all["sovereign"] == user].copy() if not df_all.empty and "sovereign" in df_all.columns else pd.DataFrame(columns=CREATION_COLS)
 
-# Auto-run quests every render
-run_quests(df_all,user)
+# ←←← Mover run_quests AQUÍ, después de cargar df_all
+run_quests(df_all, user)
 
-total_imagix=st.session_state["imagix"]
-rank=get_rank(total_imagix)
-n_done=len(st.session_state["quest_completed"])
+total_imagix = st.session_state["imagix"]
+rank = get_rank(total_imagix)
+n_done = len(st.session_state["quest_completed"])
 
-# User age & active tutors
-dob=get_user_dob(user)
-age=calc_age(dob)
-active_tutors=get_active_tutors(age)
+# User age & active tutors (solo después de auth)
+dob = get_user_dob(user)
+age = calc_age(dob)
+active_tutors = get_active_tutors(age)
 
 
 # ── HEADER ───────────────────────────────────────────────────
@@ -1274,76 +1276,55 @@ with tab_quests:
 with tab_market:
     render_tutors("market")
     st.markdown("### 🌠 GENESIS MARKETPLACE")
+    
+    # Asegurar balance actual
+    current_balance = st.session_state.get("imagix", 0)
 
-    mdf=load_market()
+    mdf = load_market()
     if mdf.empty or "id" not in mdf.columns:
-        # Empty market state
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,{C['card']},{C['card2']});border:1px solid rgba(242,201,76,.4);border-radius:16px;padding:40px 32px;text-align:center;position:relative;overflow:hidden;margin-bottom:24px;">
-            <div style="font-size:52px;margin-bottom:14px;">🌠</div>
-            <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:18px;font-weight:700;letter-spacing:2px;">GENESIS MARKETPLACE</div>
-            <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:11px;margin-top:10px;letter-spacing:2px;">No creations listed yet — be the first Sovereign to trade!</div>
-            <div style="font-family:'DM Mono',monospace;color:{C['muted']};font-size:10px;margin-top:18px;line-height:2;">✦ Go to MY VAULT and click 🌠 LIST on any creation<br>✦ Fractional ownership exchange coming v0.9<br>✦ IMAGIX escrow & settlement system · v0.9<br>✦ Parental approval gates for large trades · v0.9</div>
-        </div>""",unsafe_allow_html=True)
+        st.info("No creations listed yet — be the first Sovereign to trade!")
     else:
-        # Filter controls
-        mc1,mc2=st.columns([3,1])
-        mc1.markdown(f"**{len(mdf)} creation(s)** listed for trade")
-        with mc2:
-            mkt_sort=st.selectbox("Sort",["Recent","Highest Price","Lowest Price"],label_visibility="collapsed")
-
-        if mkt_sort=="Highest Price":
-            mdf["_lp"]=pd.to_numeric(mdf["listed_price"],errors="coerce").fillna(0)
-            mdf=mdf.sort_values("_lp",ascending=False)
-        elif mkt_sort=="Lowest Price":
-            mdf["_lp"]=pd.to_numeric(mdf["listed_price"],errors="coerce").fillna(0)
-            mdf=mdf.sort_values("_lp",ascending=True)
-        else:
-            mdf=mdf.sort_values("listed_at",ascending=False)
-
-        for _,mrow in mdf.iterrows():
-            mid=str(mrow.get("id",""))
-            mn=str(mrow.get("name",""))
-            ms=str(mrow.get("sovereign",""))
-            me=str(mrow.get("emoji","🌟"))
-            mp=int(float(str(mrow.get("listed_price",0)) or 0))
-            is_own=(ms==user)
+        for _, mrow in mdf.iterrows():
+            mid = str(mrow.get("id",""))
+            mn = str(mrow.get("name",""))
+            ms = str(mrow.get("sovereign",""))
+            me = str(mrow.get("emoji","🌟"))
+            mp = int(float(str(mrow.get("listed_price", 0)) or 0))
+            is_own = (ms == user)
 
             st.markdown(f"""
             <div class="mkt-card">
                 <div class="mkt-emoji">{me}</div>
-                <div class="mkt-info">
-                    <div class="mkt-name">{mn}</div>
-                    <div class="mkt-seller">by {ms} {'· YOUR LISTING' if is_own else ''}</div>
+                <div style="flex:1;">
+                    <div style="font-family:'Playfair Display',serif; color:#dde8ff; font-size:13px;">{mn}</div>
+                    <div style="font-family:'DM Mono',monospace; color:{C['muted']}; font-size:10px;">by {ms}</div>
                 </div>
-                <div class="mkt-price">{mp:,} 𝕀</div>
-            </div>""",unsafe_allow_html=True)
+                <div style="font-family:'Cinzel',serif; color:{C['gold']}; font-size:15px; font-weight:700;">{mp:,} 𝕀</div>
+            </div>""", unsafe_allow_html=True)
 
             if not is_own:
-                if st.button(f"💰 BUY · {mp:,} 𝕀",key=f"buy_{mid}"):
-                    if total_imagix>=mp:
+                if st.button(f"💰 BUY · {mid}", key=f"btn_buy_{mid}"):
+                    if current_balance >= mp:
                         # 1. Cobrar al comprador
-                        st.session_state["imagix"]-=mp
-                        save_wallet(user,st.session_state["imagix"])
+                        st.session_state["imagix"] -= mp
+                        save_wallet(user, st.session_state["imagix"])
 
-                        # 2. PAGAR AL VENDEDOR (Fuga reparada)
-                        seller_wallet_balance = load_wallet(ms)
-                        save_wallet(ms, seller_wallet_balance + mp)
+                        # 2. PAGAR AL VENDEDOR (Fuga sellada)
+                        seller_bal = load_wallet(ms)
+                        save_wallet(ms, seller_bal + mp)
 
-                        # Remover del mercado y transferir propiedad
-                        mdf2=load_market(); mdf2=mdf2[mdf2["id"]!=mid]; save_market(mdf2)
-                        cdf2=load_creations()
-                        cdf2.loc[cdf2["id"]==mid,"sovereign"]=user
-                        cdf2.loc[cdf2["id"]==mid,"listed_price"]=""
+                        # 3. Transferir propiedad y limpiar mercado
+                        mdf2 = load_market(); mdf2 = mdf2[mdf2["id"] != mid]; save_market(mdf2)
+                        cdf2 = load_creations()
+                        cdf2.loc[cdf2["id"] == mid, "sovereign"] = user
+                        cdf2.loc[cdf2["id"] == mid, "listed_price"] = ""
                         save_creations(cdf2)
-                        st.session_state["creations_df"]=load_creations()
-
-                        st.success(f"✦ Adquiriste **{mn}** por **{mp:,} 𝕀**! El Soberano {ms} ha recibido su pago.")
-                        run_quests(df_all,user)
+                        
+                        st.session_state["creations_df"] = load_creations()
+                        st.success(f"✦ ¡Adquiriste {mn}! El pago fue enviado a {ms}.")
                         st.rerun()
                     else:
-                        need=mp-total_imagix
-                        st.error(f"Insufficient IMAGIX. You need {need:,} more to acquire this creation.")
+                        st.error(f"Necesitas {mp - current_balance:,} 𝕀 adicionales.")
 
 
 # ────────────────────────────────────────────────────────────
