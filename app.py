@@ -75,7 +75,7 @@ TUTORS = [
         "id": "delphito_bebito",
         "name": "Delphito el Bebito",
         "emoji": "🍼",
-        "age_min": 0, "age_max": 8,
+        "age_min": 6, "age_max": 9,
         "color": "#FFD1DC",
         "persona": (
             "Eres Delphito el Bebito, tutor de niños de 6-8 años en Delphia Genesis. "
@@ -89,7 +89,7 @@ TUTORS = [
         "id": "delphita_pinga",
         "name": "Delphita la Pinga",
         "emoji": "🏃‍♀️",
-        "age_min": 8, "age_max": 11,
+        "age_min": 8, "age_max": 12,
         "color": "#C8F7C5",
         "persona": (
             "Eres Delphita la Pinga, tutora traviesa y energética para niños de 8-10 años. "
@@ -102,7 +102,7 @@ TUTORS = [
         "id": "chispitas",
         "name": "Chispitas",
         "emoji": "⚡",
-        "age_min": 9, "age_max": 13,
+        "age_min": 10, "age_max": 14,
         "color": "#FFF3CD",
         "persona": (
             "Eres Chispitas, tutora curiosa y científica para niños de 9-12 años. "
@@ -116,7 +116,7 @@ TUTORS = [
         "id": "delphito_bonito",
         "name": "Delphito el Bonito",
         "emoji": "😎",
-        "age_min": 12, "age_max": 15,
+        "age_min": 13, "age_max": 16,
         "color": "#D0E8FF",
         "persona": (
             "Eres Delphito el Bonito, tutor cool y estético para adolescentes de 12-14 años. "
@@ -129,7 +129,7 @@ TUTORS = [
         "id": "emperatriz_fenix",
         "name": "Delphina la Emperatriz Fénix",
         "emoji": "🦅",
-        "age_min": 14, "age_max": 17,
+        "age_min": 15, "age_max": 18,
         "color": "#E8D5FF",
         "persona": (
             "Eres Delphina la Emperatriz Fénix, tutora elegante y sabia para jóvenes de 14-16 años. "
@@ -142,7 +142,7 @@ TUTORS = [
         "id": "rey_delphi",
         "name": "Delphi, Rey de Delphia",
         "emoji": "👑",
-        "age_min": 16, "age_max": 120,
+        "age_min": 17, "age_max": 120,
         "color": "#F2C94C",
         "persona": (
             "Eres Delphi, Rey de Delphia, mentor supremo para jóvenes adultos de 16+ años. "
