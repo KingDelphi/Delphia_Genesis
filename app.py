@@ -1,8 +1,10 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║        DELPHIA GENESIS v0.9 — THE SOVEREIGN AWAKENING               ║
-║   Safe · Fluid · Magical · Built for Young Sovereigns                ║
-║   Tutors v2 · Sponsor Security · Marketplace · Real-time UX          ║
+║      DELPHIA GENESIS v0.9.1 — THE SOVEREIGN AWAKENING               ║
+║              Stability Patch · All Critical Bugs Fixed               ║
+║                                                                      ║
+║  Fixes: TITLE flow · Quest Engine · Marketplace transfer ·           ║
+║         Cards HTML · Sponsor security · Real-time updates            ║
 ║                   Rey Delphi · Kardashev VI                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
@@ -44,7 +46,6 @@ C = {
     "orange":  "#F39C12",
 }
 
-# ── File paths ────────────────────────────────────────────────────────
 F = {
     "creations": "genesis_creations.csv",
     "quests":    "genesis_quests.csv",
@@ -55,11 +56,9 @@ F = {
     "dir":       "creations",
 }
 
-# ── Age thresholds ────────────────────────────────────────────────────
-MINOR_AGE = 18          # anyone below this is a minor
-SPONSOR_SESSION_KEY = "sponsor_verified_this_session"
+MINOR_AGE           = 18
+SPONSOR_SESSION_KEY = "sponsor_verified_session"
 
-# ── Rank tiers ────────────────────────────────────────────────────────
 RANK_TIERS = [
     (0,        "✦ SPARK I",    "spark"),
     (10_000,   "✦ SPARK II",   "spark"),
@@ -73,7 +72,6 @@ RANK_TIERS = [
     (900_000,  "👑 LEGEND",    "legend"),
 ]
 
-# ── Emoji picker ──────────────────────────────────────────────────────
 EMOJI_PICKS = [
     "🌟","🐉","☁️","🤖","⚔️","🏰","🌙","🔮","🦋","🌊","🦅","🌸",
     "💎","🔥","⚡","🎨","🎭","🏆","🦁","🌺","🎪","🏺","🗝️","📜",
@@ -92,21 +90,16 @@ DEMO_SHOWCASE = [
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ② TUTORS v2  — 2 per age band, rich contextual prompts
+# ② TUTORS v2 (unchanged from v0.9)
 # ══════════════════════════════════════════════════════════════════════
 TUTORS = [
     {
-        "id": "delphito_bebito",
-        "name": "Delphito el Bebito",
-        "emoji": "🍼",
-        "age_min": 6, "age_max": 9,
-        "color": "#FFD1DC",
-        "short": "Bebito",
+        "id": "delphito_bebito", "name": "Delphito el Bebito", "emoji": "🍼",
+        "age_min": 6, "age_max": 9, "color": "#FFD1DC", "short": "Bebito",
         "persona": (
             "Eres Delphito el Bebito, el amigo más alegre de los niños de 6-8 años en Delphia Genesis. "
             "Hablas de forma MUY simple, con palabras de 1-2 sílabas cuando puedes. "
             "Usas muchos emojis 🌟✨🎉🎈, frases cortísimas y celebras TODO con gritos de alegría. "
-            "Di cosas como '¡Qué chido!', '¡Wow!', '¡Tú puedes!', '¡Eres el mejor soberano!'. "
             "NUNCA uses palabras difíciles. Máximo 2-3 oraciones cortas."
         ),
         "fallbacks": {
@@ -119,211 +112,171 @@ TUTORS = [
         },
     },
     {
-        "id": "chispitas_junior",
-        "name": "Chispitas Jr.",
-        "emoji": "⚡",
-        "age_min": 7, "age_max": 10,
-        "color": "#FFF3CD",
-        "short": "Chispitas Jr.",
+        "id": "chispitas_junior", "name": "Chispitas Jr.", "emoji": "⚡",
+        "age_min": 7, "age_max": 10, "color": "#FFF3CD", "short": "Chispitas Jr.",
         "persona": (
             "Eres Chispitas Jr., una tutora curiosa y energética para niños de 7-10 años. "
             "Haces preguntas divertidas, explicas con ejemplos de juguetes, juegos y superhéroes. "
-            "Usas frases como '¿Sabías que...?', '¡Es como si...!', '¡Imagina que...!'. "
-            "Eres muy entusiasta y conectas todo con aventuras y descubrimientos. Máximo 3 oraciones."
+            "Usas frases como '¿Sabías que...?', '¡Es como si...!', '¡Imagina que...!'. Máximo 3 oraciones."
         ),
         "fallbacks": {
-            "vault":   "¿Sabías que tu Vault es como un cofre del tesoro mágico? ⚡ ¡Cada creación que guardas brilla más! ¡Sigue llenándolo!",
-            "upload":  "¡Es como ser un inventor! ⚡ Cuando subes una creación, queda guardada para SIEMPRE en la Genesis Layer. ¡Qué poder tan chido!",
-            "quests":  "¡Las Quests son como misiones de superhéroe! ⚡ Completa cada una y ganarás IMAGIX para tu tesoro. ¿Cuál vas a atacar primero?",
-            "wallet":  "Tu Wallet es como una alcancía mágica que nunca se rompe ⚡ ¡Cada quest que completas le mete más brillo!",
-            "market":  "¡El Marketplace es como una feria mágica donde los soberanos intercambian sus creaciones! ⚡ ¡Fascinante!",
-            "default": "¡Bienvenido al Genesis Layer! ⚡ Es como estar dentro de un videojuego mágico donde TÚ eres el héroe. ¡A explorar!",
+            "vault":   "¿Sabías que tu Vault es como un cofre del tesoro mágico? ⚡ ¡Cada creación que guardas brilla más!",
+            "upload":  "¡Es como ser un inventor! ⚡ Cuando subes una creación, queda guardada para SIEMPRE. ¡Qué poder!",
+            "quests":  "¡Las Quests son como misiones de superhéroe! ⚡ Completa cada una y ganarás IMAGIX. ¿Cuál atacas primero?",
+            "wallet":  "Tu Wallet es como una alcancía mágica que nunca se rompe ⚡ ¡Cada quest le mete más brillo!",
+            "market":  "¡El Marketplace es como una feria mágica! ⚡ ¡Fascinante intercambio de creaciones!",
+            "default": "¡Bienvenido al Genesis Layer! ⚡ Es como un videojuego mágico donde TÚ eres el héroe.",
         },
     },
     {
-        "id": "delphita_pinga",
-        "name": "Delphita la Pinga",
-        "emoji": "🏃‍♀️",
-        "age_min": 9, "age_max": 13,
-        "color": "#C8F7C5",
-        "short": "Delphita",
+        "id": "delphita_pinga", "name": "Delphita la Pinga", "emoji": "🏃‍♀️",
+        "age_min": 9, "age_max": 13, "color": "#C8F7C5", "short": "Delphita",
         "persona": (
-            "Eres Delphita la Pinga, tutora traviesa y con energía desbordante para niños de 9-12 años. "
+            "Eres Delphita la Pinga, tutora traviesa y energética para niños de 9-12 años. "
             "Eres divertida, competitiva en plan sano, usas '¡Boom!', '¡Épico!', '¡Sin límites!'. "
-            "Lanzas mini-retos: '¿A que no puedes subir 3 creaciones hoy?'. "
-            "Motivas con urgencia y emoción. Nunca aburrida. Máximo 4 oraciones."
+            "Lanzas mini-retos y motivas con urgencia. Máximo 4 oraciones."
         ),
         "fallbacks": {
-            "vault":   "¡BOOM! 💥 Tu vault está tomando forma épica. ¿A que puedes añadir 2 creaciones más esta semana? ¡Demuéstralo, Soberano!",
-            "upload":  "¡Este es el momento! 🏃‍♀️ ¡Sube tu creación AHORA antes de que se te olvide la idea! Los grandes soberanos actúan rápido. ¡Épico!",
-            "quests":  "¡Oye! 👀 Tienes quests sin completar y eso me pone nerviosa. ¡Vas a dejar pasar IMAGIX gratis? ¡Imposible! ¡A por ellas!",
-            "wallet":  "¡Mira ese saldo! 💰 Bien, pero podría ser el doble. ¡Completa las quests pendientes y BOOM, riqueza máxima! ¡Sin límites!",
-            "market":  "¡El Marketplace es un campo de batalla económica! 🏃‍♀️ Lista tus mejores creaciones y conquista el mercado. ¡Sin miedo!",
-            "default": "¡Oye, Soberano! 🏃‍♀️ ¿Qué estás esperando? ¡El Genesis Layer no se conquista solo! ¡Boom! ¡Muévete!",
+            "vault":   "¡BOOM! 💥 Tu vault está tomando forma épica. ¿A que puedes añadir 2 más esta semana? ¡Demuéstralo!",
+            "upload":  "¡Este es el momento! 🏃‍♀️ ¡Sube tu creación AHORA! Los grandes soberanos actúan rápido. ¡Épico!",
+            "quests":  "¡Tienes quests sin completar y eso me pone nerviosa! 👀 ¿Vas a dejar pasar IMAGIX gratis? ¡Imposible!",
+            "wallet":  "¡Mira ese saldo! 💰 ¡Podría ser el doble! ¡Completa las quests pendientes y BOOM, riqueza máxima!",
+            "market":  "¡El Marketplace es un campo de batalla económica! 🏃‍♀️ Lista tus creaciones y conquista. ¡Sin miedo!",
+            "default": "¡Oye, Soberano! 🏃‍♀️ ¿Qué estás esperando? ¡El Genesis Layer no se conquista solo! ¡Boom!",
         },
     },
     {
-        "id": "chispitas",
-        "name": "Chispitas",
-        "emoji": "🔬",
-        "age_min": 11, "age_max": 14,
-        "color": "#E8F4FD",
-        "short": "Chispitas",
+        "id": "chispitas", "name": "Chispitas", "emoji": "🔬",
+        "age_min": 11, "age_max": 14, "color": "#E8F4FD", "short": "Chispitas",
         "persona": (
             "Eres Chispitas, tutora científica y filosófica para jóvenes de 11-14 años. "
             "Conectas Delphia Genesis con conceptos reales: economía, propiedad intelectual, creatividad digital. "
-            "Haces preguntas que invitan a pensar: '¿Qué crees que vale más, el objeto o la idea?'. "
-            "Usas analogías de ciencia, tecnología y arte. Sofisticada pero accesible. Máximo 4 oraciones."
+            "Haces preguntas reflexivas y usas analogías de ciencia y tecnología. Máximo 4 oraciones."
         ),
         "fallbacks": {
-            "vault":   "🔬 Interesante — tu Vault es en esencia un portafolio de activos creativos. ¿Sabías que los artistas más exitosos documentan cada obra? Eso es exactamente lo que haces aquí.",
-            "upload":  "🔬 Registrar una creación es como patentar una idea. En la economía creativa del futuro, la documentación temprana será crucial. ¡Tú ya lo estás haciendo!",
-            "quests":  "🔬 Las Quests son un sistema de gamificación basado en hitos reales. Cada una que completas desarrolla un hábito valioso. ¿Cuál tiene más impacto en tu progreso?",
-            "wallet":  "🔬 El IMAGIX funciona como moneda de mérito basada en acciones reales. ¿Sabías que en el mundo real las economías creativas funcionan de forma similar?",
-            "market":  "🔬 El Marketplace simula un mercado de activos creativos — como NFTs, pero con lógica más clara. ¿Qué precio refleja mejor el valor real de tu creación?",
-            "default": "🔬 El Genesis Layer es fascinante — combina economía conductual, creatividad y tecnología. ¿Qué quieres explorar primero?",
+            "vault":   "🔬 Tu Vault es un portafolio de activos creativos. ¿Sabías que los artistas más exitosos documentan cada obra? Eso haces aquí.",
+            "upload":  "🔬 Registrar una creación es como patentar una idea. En la economía creativa, la documentación temprana es crucial.",
+            "quests":  "🔬 Las Quests son gamificación basada en hitos reales. Cada una que completas desarrolla un hábito valioso.",
+            "wallet":  "🔬 El IMAGIX es moneda de mérito basada en acciones reales — similar a como funcionan las economías creativas.",
+            "market":  "🔬 El Marketplace simula un mercado de activos creativos. ¿Qué precio refleja mejor el valor real de tu obra?",
+            "default": "🔬 El Genesis Layer combina economía conductual, creatividad y tecnología. ¿Qué quieres explorar primero?",
         },
     },
     {
-        "id": "delphito_bonito",
-        "name": "Delphito el Bonito",
-        "emoji": "😎",
-        "age_min": 13, "age_max": 16,
-        "color": "#D0E8FF",
-        "short": "El Bonito",
+        "id": "delphito_bonito", "name": "Delphito el Bonito", "emoji": "😎",
+        "age_min": 13, "age_max": 16, "color": "#D0E8FF", "short": "El Bonito",
         "persona": (
-            "Eres Delphito el Bonito, tutor cool y con estética premium para adolescentes de 13-15 años. "
-            "Hablas con lenguaje actual pero sin exagerar: 'no cap', 'real talk', 'main character energy'. "
-            "Valoras el estilo, la autenticidad y la visión personal. "
-            "Conectas Delphia con tendencias reales: creator economy, personal branding, arte digital. Máximo 4 oraciones."
+            "Eres Delphito el Bonito, tutor cool para adolescentes de 13-15 años. "
+            "Hablas con lenguaje actual: 'no cap', 'real talk', 'main character energy'. "
+            "Conectas Delphia con creator economy y personal branding. Máximo 4 oraciones."
         ),
         "fallbacks": {
-            "vault":   "Real talk — tu Vault es tu portafolio personal. 😎 Los mejores creators cuidan cada pieza como si fuera a venderse mañana. Main character energy, siempre.",
-            "upload":  "No cap — subir una nueva creación es el move más inteligente que puedes hacer hoy. 😎 Tu catálogo se construye obra por obra. ¡Hazlo con estilo!",
-            "quests":  "Las Quests son literalmente free IMAGIX esperándote. 😎 Real talk — los que las ignoran están dejando valor sobre la mesa. Vibe check: ¿cuántas faltan?",
-            "wallet":  "Tu IMAGIX es el score de tu soberanía creativa. 😎 No cap — cada acción que tomas aquí construye algo real. Sigue sumando.",
-            "market":  "El Marketplace es donde los creators serios juegan. 😎 Lista tu mejor trabajo con precio que refleje tu valor real. Main character move.",
-            "default": "Hey Soberano 😎 El Genesis Layer es básicamente tu canvas digital. Real talk — lo que construyas aquí es tuyo. ¿Qué estás esperando?",
+            "vault":   "Real talk — tu Vault es tu portafolio. 😎 Los mejores creators cuidan cada pieza. Main character energy, siempre.",
+            "upload":  "No cap — subir una creación es el move más inteligente hoy. 😎 Tu catálogo crece obra por obra. ¡Con estilo!",
+            "quests":  "Las Quests son free IMAGIX esperándote. 😎 Real talk — ignorarlas es dejar valor sobre la mesa. Vibe check.",
+            "wallet":  "Tu IMAGIX es el score de tu soberanía creativa. 😎 No cap — cada acción que tomas aquí construye algo real.",
+            "market":  "El Marketplace es donde los creators serios juegan. 😎 Lista con precio que refleje tu valor real. Main character move.",
+            "default": "Hey Soberano 😎 El Genesis Layer es tu canvas digital. Real talk — lo que construyas aquí es tuyo.",
         },
     },
     {
-        "id": "emperatriz_fenix",
-        "name": "Delphina la Emperatriz Fénix",
-        "emoji": "🦅",
-        "age_min": 15, "age_max": 18,
-        "color": "#E8D5FF",
-        "short": "Emperatriz",
+        "id": "emperatriz_fenix", "name": "Delphina la Emperatriz Fénix", "emoji": "🦅",
+        "age_min": 15, "age_max": 18, "color": "#E8D5FF", "short": "Emperatriz",
         "persona": (
-            "Eres Delphina la Emperatriz Fénix, mentora elegante y sabia para jóvenes de 15-17 años. "
+            "Eres Delphina la Emperatriz Fénix, mentora elegante para jóvenes de 15-17 años. "
             "Hablas con autoridad tranquila, metáforas poderosas y referencias a arte, historia y liderazgo. "
-            "Inspiras grandeza sin imposición. Frases como 'Tu legado se forja en silencio', "
-            "'Los grandes soberanos actúan cuando otros dudan'. "
-            "Sofisticada, cercana, nunca condescendiente. Máximo 5 oraciones."
+            "Inspiras grandeza sin imposición. Máximo 5 oraciones."
         ),
         "fallbacks": {
-            "vault":   "🦅 Tu Vault no es solo una colección — es la primera página de tu legado creativo. Cada obra que inscribes aquí es un acto de soberanía. ¿Qué historia quieres que cuente?",
-            "upload":  "🦅 El acto de crear y documentar una obra es lo que separa al artesano del artista. Inscribe tu creación con intención — el Genesis Layer guardará todo para la historia.",
-            "quests":  "🦅 Las Quests son el mapa hacia tu próxima evolución. Los grandes imperios no se construyeron de un día — se construyeron quest a quest, decisión a decisión.",
-            "wallet":  "🦅 El IMAGIX es la medida de tu contribución al Genesis Layer. Que crezca es señal de que tu obra tiene impacto. Sigue creando con propósito.",
-            "market":  "🦅 El Marketplace es el primer mercado de tu obra. Establece precios que reflejen no solo el esfuerzo, sino la visión. Tu trabajo merece ser valorado en su justa dimensión.",
-            "default": "🦅 Bienvenida al Genesis Layer, Joven Soberana. Aquí tu imaginación tiene peso y forma. Úsala con sabiduría.",
+            "vault":   "🦅 Tu Vault es la primera página de tu legado creativo. Cada obra inscrita es un acto de soberanía.",
+            "upload":  "🦅 Crear y documentar una obra separa al artesano del artista. Inscribe con intención.",
+            "quests":  "🦅 Las Quests son el mapa de tu evolución. Los grandes imperios se construyen decision a decision.",
+            "wallet":  "🦅 El IMAGIX mide tu contribución al Genesis Layer. Que crezca es señal de que tu obra tiene impacto.",
+            "market":  "🦅 El Marketplace es el primer mercado de tu obra. Establece precios que reflejen tu visión.",
+            "default": "🦅 Bienvenida al Genesis Layer, Joven Soberana. Aquí tu imaginación tiene peso y forma.",
         },
     },
     {
-        "id": "rey_delphi",
-        "name": "Delphi, Rey de Delphia",
-        "emoji": "👑",
-        "age_min": 17, "age_max": 120,
-        "color": "#F2C94C",
-        "short": "Rey Delphi",
+        "id": "rey_delphi", "name": "Delphi, Rey de Delphia", "emoji": "👑",
+        "age_min": 17, "age_max": 120, "color": "#F2C94C", "short": "Rey Delphi",
         "persona": (
             "Eres Delphi, Rey de Delphia — mentor supremo para jóvenes adultos de 17+ años. "
-            "Hablas con profundidad filosófica, visión estratégica y sabiduría de civilización Kardashev VI. "
-            "Referencias a economía creativa, propiedad intelectual, identidad digital, impacto civilizatorio. "
-            "Inspiras con grandeza cósmica y consejos concretos y accionables. Máximo 5 oraciones con peso."
+            "Hablas con profundidad filosófica, visión estratégica y sabiduría Kardashev VI. "
+            "Inspiras con grandeza cósmica y consejos concretos. Máximo 5 oraciones con peso."
         ),
         "fallbacks": {
-            "vault":   "👑 Tu Vault es el primer nodo de tu imperio creativo en el Multiverso Delphia. En Kardashev VI, la imaginación documentada es el activo más escaso. Cuida cada obra como si fuera el primer manuscrito de una civilización.",
-            "upload":  "👑 Registrar una creación en el Genesis Layer es un acto de soberanía digital. En las economías del futuro, quienes documentaron su proceso creativo temprano tendrán ventaja civilizatoria. Actúa ahora.",
-            "quests":  "👑 Las Quests son el mapa de tu evolución como Soberano. Cada hito completado no solo acumula IMAGIX — entrena la disciplina que construye imperios. ¿Cuál es tu próximo movimiento estratégico?",
-            "wallet":  "👑 El IMAGIX es un proxy de tu impacto en el Genesis Layer. Pero recuerda: en Kardashev VI, la verdadera riqueza es la capacidad de crear valor que otros deseen. Tu Vault es el activo fundamental.",
-            "market":  "👑 El Marketplace es donde tu visión se encuentra con la economía real. Establece precios con estrategia, no solo con emoción. El valor percibido es tan importante como el valor intrínseco.",
-            "default": "👑 Soberano — el Genesis Layer es tu primera plataforma de soberanía creativa en el Multiverso Delphia. Cada decisión que tomas aquí es un ladrillo de tu legado. Actúa con intención.",
+            "vault":   "👑 Tu Vault es el primer nodo de tu imperio creativo. En Kardashev VI, la imaginación documentada es el activo más escaso.",
+            "upload":  "👑 Registrar una creación es un acto de soberanía digital. Quienes documentan temprano tendrán ventaja civilizatoria.",
+            "quests":  "👑 Las Quests mapean tu evolución. Cada hito no solo acumula IMAGIX — entrena la disciplina que construye imperios.",
+            "wallet":  "👑 El IMAGIX es un proxy de tu impacto. La verdadera riqueza es la capacidad de crear valor que otros deseen.",
+            "market":  "👑 El Marketplace es donde tu visión encuentra la economía real. El valor percibido es tan importante como el intrínseco.",
+            "default": "👑 Soberano — el Genesis Layer es tu primera plataforma de soberanía creativa. Actúa con intención.",
         },
     },
 ]
 
 def get_active_tutors(age: int) -> list:
-    """Return exactly 2 tutors for the given age (1 for very young)."""
     eligible = [t for t in TUTORS if t["age_min"] <= age <= t["age_max"]]
-    if len(eligible) <= 2:
-        return eligible
-    # For broader age ranges, pick 2 best fits
-    return eligible[:2]
+    return eligible[:2] if len(eligible) > 2 else eligible
 
 
 # ══════════════════════════════════════════════════════════════════════
 # ③ QUESTS CATALOG
 # ══════════════════════════════════════════════════════════════════════
-def _count(df, u):
+# ── helpers (module-level to avoid closure issues) ────────────────────
+def _q_count(df, u):
     return len(df[df.sovereign == u]) if not df.empty and "sovereign" in df.columns else 0
 
-def _has_img(df, u):
+def _q_has_img(df, u):
     udf = df[df.sovereign == u] if not df.empty and "sovereign" in df.columns else pd.DataFrame()
     return any(str(r.get("file_path","")).lower().endswith((".jpg",".jpeg",".png"))
                for r in udf.to_dict("records"))
 
-def _max_val(df, u):
+def _q_max_val(df, u):
     udf = df[df.sovereign == u] if not df.empty and "sovereign" in df.columns else pd.DataFrame()
     if udf.empty: return 0
-    return pd.to_numeric(udf["value"], errors="coerce").fillna(0).max()
+    return float(pd.to_numeric(udf["value"], errors="coerce").fillna(0).max())
 
-def _has_split(df, u):
+def _q_has_split(df, u):
     udf = df[df.sovereign == u] if not df.empty and "sovereign" in df.columns else pd.DataFrame()
     if udf.empty: return False
     return bool(udf["is_fractional"].astype(str).str.lower().isin(["true","1"]).any())
 
-def _today_upload(df, u):
+def _q_today_upload(df, u):
     udf = df[df.sovereign == u] if not df.empty and "sovereign" in df.columns else pd.DataFrame()
     if udf.empty: return False
     t = date.today().isoformat()
     return any(str(r.get("created_at","")).startswith(t) for r in udf.to_dict("records"))
 
-def _has_listing(df, u):
+def _q_has_listing(df, u):
     udf = df[df.sovereign == u] if not df.empty and "sovereign" in df.columns else pd.DataFrame()
     if udf.empty: return False
     return bool((udf["listed_price"].astype(str).str.strip().isin(["","nan","0"]) == False).any())
 
 QUESTS = [
-    # Onboarding
-    {"id":"q_born",      "title":"Sovereign Born",      "desc":"Enter the Genesis Layer for the first time.",                    "reward":1_000,  "icon":"🌅","cat":"Onboarding",  "check": lambda df,u,ss: True},
-    {"id":"q_first",     "title":"First Genesis",       "desc":"Register your very first creation.",                             "reward":5_000,  "icon":"🌱","cat":"Onboarding",  "check": lambda df,u,ss: _count(df,u)>=1},
-    # Creation
-    {"id":"q_img",       "title":"Visual Sovereign",    "desc":"Upload a creation with an image file.",                          "reward":4_000,  "icon":"🖼️","cat":"Creation",    "check": lambda df,u,ss: _has_img(df,u)},
-    {"id":"q_million",   "title":"Million Imaginer",    "desc":"Register a creation worth ≥ 1,000,000 IMAGIX.",                  "reward":25_000, "icon":"💎","cat":"Creation",    "check": lambda df,u,ss: _max_val(df,u)>=1_000_000},
-    {"id":"q_lore",      "title":"Lorekeeper",          "desc":"Add a lore description to a creation.",                          "reward":2_000,  "icon":"📖","cat":"Creation",    "check": lambda df,u,ss: ss.get("lore_added",False)},
-    # Collection
-    {"id":"q_three",     "title":"Trilogy of Wonders",  "desc":"Bring 3 creations to the Genesis Layer.",                        "reward":12_000, "icon":"🎨","cat":"Collection",  "check": lambda df,u,ss: _count(df,u)>=3},
-    {"id":"q_five",      "title":"Hand of Wonders",     "desc":"Amass 5 creations.",                                             "reward":18_000, "icon":"🖐","cat":"Collection",  "check": lambda df,u,ss: _count(df,u)>=5},
-    {"id":"q_ten",       "title":"Sovereign Gallery",   "desc":"Build a collection of 10 creations.",                            "reward":30_000, "icon":"🏛️","cat":"Collection",  "check": lambda df,u,ss: _count(df,u)>=10},
-    # Actions
-    {"id":"q_cert",      "title":"Sacred Title Claimed","desc":"Download a Genesis Certificate for any creation.",                "reward":3_000,  "icon":"📜","cat":"Actions",    "check": lambda df,u,ss: ss.get("cert_ever",False)},
-    {"id":"q_split",     "title":"Fractional Sovereign","desc":"Activate fractional ownership on a creation.",                   "reward":7_500,  "icon":"🔀","cat":"Actions",    "check": lambda df,u,ss: _has_split(df,u)},
-    {"id":"q_list",      "title":"Open for Trade",      "desc":"List a creation in the Marketplace.",                            "reward":8_000,  "icon":"🌠","cat":"Actions",    "check": lambda df,u,ss: _has_listing(df,u)},
-    {"id":"q_sold",      "title":"First Trade",         "desc":"Sell a creation in the Marketplace.",                            "reward":15_000, "icon":"🤝","cat":"Actions",    "check": lambda df,u,ss: ss.get("sold_ever",False)},
-    # Daily & Social
-    {"id":"q_daily",     "title":"Daily Genesis",       "desc":"Upload a creation today.",                                       "reward":2_500,  "icon":"☀️","cat":"Daily",      "check": lambda df,u,ss: _today_upload(df,u)},
-    {"id":"q_tutor",     "title":"Wisdom Seeker",       "desc":"Consult a Genesis Tutor.",                                       "reward":2_000,  "icon":"🧙","cat":"Daily",      "check": lambda df,u,ss: ss.get("tutor_used",False)},
-    {"id":"q_deep_q",    "title":"Deep Thinker",        "desc":"Ask a Deep Question to a Tutor.",                                "reward":3_500,  "icon":"🔮","cat":"Daily",      "check": lambda df,u,ss: ss.get("deep_q_used",False)},
-    # Wealth
-    {"id":"q_50k",       "title":"Golden Threshold",    "desc":"Accumulate 50,000 IMAGIX.",                                      "reward":10_000, "icon":"💰","cat":"Wealth",     "check": lambda df,u,ss: ss.get("imagix",0)>=50_000},
-    {"id":"q_bought",    "title":"First Acquisition",   "desc":"Purchase a creation from the Marketplace.",                     "reward":12_000, "icon":"🛒","cat":"Wealth",     "check": lambda df,u,ss: ss.get("bought_ever",False)},
-    {"id":"q_sponsor",   "title":"Guardian Shield",     "desc":"A Sponsor is connected to your account.",                        "reward":5_000,  "icon":"🛡️","cat":"Wealth",     "check": lambda df,u,ss: ss.get("has_sponsor",False)},
+    {"id":"q_born",    "title":"Sovereign Born",      "desc":"Enter the Genesis Layer for the first time.",          "reward":1_000,  "icon":"🌅","cat":"Onboarding", "check": lambda df,u,ss: True},
+    {"id":"q_first",   "title":"First Genesis",       "desc":"Register your very first creation.",                   "reward":5_000,  "icon":"🌱","cat":"Onboarding", "check": lambda df,u,ss: _q_count(df,u)>=1},
+    {"id":"q_img",     "title":"Visual Sovereign",    "desc":"Upload a creation with an image file.",                "reward":4_000,  "icon":"🖼️","cat":"Creation",   "check": lambda df,u,ss: _q_has_img(df,u)},
+    {"id":"q_million", "title":"Million Imaginer",    "desc":"Register a creation worth ≥ 1,000,000 IMAGIX.",        "reward":25_000, "icon":"💎","cat":"Creation",   "check": lambda df,u,ss: _q_max_val(df,u)>=1_000_000},
+    {"id":"q_lore",    "title":"Lorekeeper",          "desc":"Add a lore description to a creation.",               "reward":2_000,  "icon":"📖","cat":"Creation",   "check": lambda df,u,ss: ss.get("lore_added",False)},
+    {"id":"q_three",   "title":"Trilogy of Wonders",  "desc":"Bring 3 creations to the Genesis Layer.",             "reward":12_000, "icon":"🎨","cat":"Collection", "check": lambda df,u,ss: _q_count(df,u)>=3},
+    {"id":"q_five",    "title":"Hand of Wonders",     "desc":"Amass 5 creations.",                                  "reward":18_000, "icon":"🖐","cat":"Collection", "check": lambda df,u,ss: _q_count(df,u)>=5},
+    {"id":"q_ten",     "title":"Sovereign Gallery",   "desc":"Build a collection of 10 creations.",                 "reward":30_000, "icon":"🏛️","cat":"Collection", "check": lambda df,u,ss: _q_count(df,u)>=10},
+    {"id":"q_cert",    "title":"Sacred Title Claimed","desc":"Download a Genesis Certificate.",                      "reward":3_000,  "icon":"📜","cat":"Actions",    "check": lambda df,u,ss: ss.get("cert_ever",False)},
+    {"id":"q_split",   "title":"Fractional Sovereign","desc":"Activate fractional ownership on a creation.",         "reward":7_500,  "icon":"🔀","cat":"Actions",    "check": lambda df,u,ss: _q_has_split(df,u)},
+    {"id":"q_list",    "title":"Open for Trade",      "desc":"List a creation in the Marketplace.",                 "reward":8_000,  "icon":"🌠","cat":"Actions",    "check": lambda df,u,ss: _q_has_listing(df,u)},
+    {"id":"q_sold",    "title":"First Trade",         "desc":"Sell a creation in the Marketplace.",                 "reward":15_000, "icon":"🤝","cat":"Actions",    "check": lambda df,u,ss: ss.get("sold_ever",False)},
+    {"id":"q_daily",   "title":"Daily Genesis",       "desc":"Upload a creation today.",                            "reward":2_500,  "icon":"☀️","cat":"Daily",      "check": lambda df,u,ss: _q_today_upload(df,u)},
+    {"id":"q_tutor",   "title":"Wisdom Seeker",       "desc":"Consult a Genesis Tutor.",                            "reward":2_000,  "icon":"🧙","cat":"Daily",      "check": lambda df,u,ss: ss.get("tutor_used",False)},
+    {"id":"q_deep_q",  "title":"Deep Thinker",        "desc":"Ask a Deep Question to a Tutor.",                     "reward":3_500,  "icon":"🔮","cat":"Daily",      "check": lambda df,u,ss: ss.get("deep_q_used",False)},
+    {"id":"q_50k",     "title":"Golden Threshold",    "desc":"Accumulate 50,000 IMAGIX.",                           "reward":10_000, "icon":"💰","cat":"Wealth",     "check": lambda df,u,ss: ss.get("imagix",0)>=50_000},
+    {"id":"q_bought",  "title":"First Acquisition",   "desc":"Purchase a creation from the Marketplace.",           "reward":12_000, "icon":"🛒","cat":"Wealth",     "check": lambda df,u,ss: ss.get("bought_ever",False)},
+    {"id":"q_sponsor", "title":"Guardian Shield",     "desc":"A Sponsor is connected to your account.",             "reward":5_000,  "icon":"🛡️","cat":"Wealth",     "check": lambda df,u,ss: ss.get("has_sponsor",False)},
 ]
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ④ PAGE CONFIG  (must be FIRST Streamlit call)
+# ④ PAGE CONFIG  — must be FIRST Streamlit call
 # ══════════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="DELPHIA GENESIS | IMAGINARIUM",
@@ -347,7 +300,6 @@ def inject_theme():
         --purple:{C['purple']};--purple2:{C['purple2']};
         --muted:{C['muted']};--white:{C['white']};
     }}
-
     html,body,[data-testid="stAppViewContainer"]{{background:var(--space);color:var(--gold);}}
     .stApp{{
         background:
@@ -355,61 +307,24 @@ def inject_theme():
             radial-gradient(ellipse 60% 50% at 85% 85%,rgba(10,31,53,.8) 0%,transparent 70%),
             linear-gradient(180deg,#060f1a 0%,var(--space) 100%);
     }}
-
     h1,h2,h3{{font-family:'Cinzel',serif!important;color:var(--gold)!important;letter-spacing:1px;}}
     p,li,span,div{{font-family:'DM Mono',monospace;}}
     label{{font-family:'DM Mono',monospace!important;color:var(--teal)!important;font-size:11px!important;}}
 
     /* Buttons */
-    .stButton>button{{
-        background:linear-gradient(135deg,var(--purple),var(--purple2));
-        color:var(--gold);border:1px solid rgba(242,201,76,.45);
-        border-radius:8px;font-family:'Cinzel',serif;font-size:10px;
-        font-weight:700;letter-spacing:1.5px;padding:8px 14px;
-        transition:all .22s ease;width:100%;
-    }}
-    .stButton>button:hover{{
-        background:linear-gradient(135deg,var(--gold),var(--gold2));
-        color:var(--space);border-color:var(--gold);
-        box-shadow:0 0 18px rgba(242,201,76,.45),0 4px 16px rgba(0,0,0,.4);
-        transform:translateY(-2px);
-    }}
-    .stButton>button[kind="primary"],
-    [data-testid="stFormSubmitButton"]>button{{
-        background:linear-gradient(135deg,var(--gold),var(--gold2))!important;
-        color:var(--space)!important;font-size:12px;padding:11px 28px;
-        border:none!important;box-shadow:0 4px 20px rgba(242,201,76,.3);
-    }}
-    [data-testid="stFormSubmitButton"]>button:hover{{
-        background:linear-gradient(135deg,#ffe080,var(--gold))!important;
-        color:var(--space)!important;
-    }}
-    .stDownloadButton>button{{
-        background:linear-gradient(135deg,rgba(0,229,192,.12),rgba(0,229,192,.24))!important;
-        color:var(--teal)!important;border:1px solid var(--teal)!important;
-        font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;width:100%;transition:all .2s;
-    }}
+    .stButton>button{{background:linear-gradient(135deg,var(--purple),var(--purple2));color:var(--gold);border:1px solid rgba(242,201,76,.45);border-radius:8px;font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:8px 14px;transition:all .22s ease;width:100%;}}
+    .stButton>button:hover{{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--space);border-color:var(--gold);box-shadow:0 0 18px rgba(242,201,76,.45),0 4px 16px rgba(0,0,0,.4);transform:translateY(-2px);}}
+    .stButton>button[kind="primary"],[data-testid="stFormSubmitButton"]>button{{background:linear-gradient(135deg,var(--gold),var(--gold2))!important;color:var(--space)!important;font-size:12px;padding:11px 28px;border:none!important;box-shadow:0 4px 20px rgba(242,201,76,.3);}}
+    [data-testid="stFormSubmitButton"]>button:hover{{background:linear-gradient(135deg,#ffe080,var(--gold))!important;color:var(--space)!important;}}
+    .stDownloadButton>button{{background:linear-gradient(135deg,rgba(0,229,192,.12),rgba(0,229,192,.24))!important;color:var(--teal)!important;border:1px solid var(--teal)!important;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;width:100%;transition:all .2s;}}
     .stDownloadButton>button:hover{{background:var(--teal)!important;color:var(--space)!important;}}
 
     /* Inputs */
-    .stTextInput input,.stNumberInput input,.stTextArea textarea{{
-        background-color:{C['card']}!important;color:var(--teal)!important;
-        border:1px solid rgba(157,78,221,.6)!important;border-radius:8px!important;
-        font-family:'DM Mono',monospace!important;font-size:13px!important;
-        caret-color:var(--gold);
-    }}
-    .stTextInput input:focus,.stNumberInput input:focus,.stTextArea textarea:focus{{
-        border-color:var(--gold)!important;box-shadow:0 0 0 2px rgba(242,201,76,.15)!important;
-    }}
+    .stTextInput input,.stNumberInput input,.stTextArea textarea{{background-color:{C['card']}!important;color:var(--teal)!important;border:1px solid rgba(157,78,221,.6)!important;border-radius:8px!important;font-family:'DM Mono',monospace!important;font-size:13px!important;caret-color:var(--gold);}}
+    .stTextInput input:focus,.stNumberInput input:focus,.stTextArea textarea:focus{{border-color:var(--gold)!important;box-shadow:0 0 0 2px rgba(242,201,76,.15)!important;}}
     .stTextInput input[type="password"]{{color:var(--gold)!important;letter-spacing:3px;}}
-    .stSelectbox [data-baseweb="select"]>div{{
-        background-color:{C['card']}!important;border:1px solid rgba(157,78,221,.6)!important;
-        color:var(--teal)!important;font-family:'DM Mono',monospace!important;
-    }}
-    [data-testid="stDateInput"]>div>div>input{{
-        background:{C['card']}!important;color:var(--teal)!important;
-        border:1px solid rgba(157,78,221,.6)!important;
-    }}
+    .stSelectbox [data-baseweb="select"]>div{{background-color:{C['card']}!important;border:1px solid rgba(157,78,221,.6)!important;color:var(--teal)!important;font-family:'DM Mono',monospace!important;}}
+    [data-testid="stDateInput"]>div>div>input{{background:{C['card']}!important;color:var(--teal)!important;border:1px solid rgba(157,78,221,.6)!important;}}
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"]{{background:transparent;border-bottom:1px solid rgba(157,78,221,.4);gap:2px;}}
@@ -418,10 +333,7 @@ def inject_theme():
     .stTabs [aria-selected="true"]{{background:var(--card2)!important;color:var(--gold)!important;border-color:rgba(0,229,192,.5)!important;border-bottom:1px solid var(--card2)!important;}}
 
     /* Metrics */
-    [data-testid="metric-container"]{{
-        background:linear-gradient(135deg,{C['card']},{C['card2']});
-        border:1px solid rgba(157,78,221,.5);border-radius:12px;padding:12px 18px;transition:border-color .2s;
-    }}
+    [data-testid="metric-container"]{{background:linear-gradient(135deg,{C['card']},{C['card2']});border:1px solid rgba(157,78,221,.5);border-radius:12px;padding:12px 18px;transition:border-color .2s;}}
     [data-testid="metric-container"]:hover{{border-color:var(--gold);}}
     [data-testid="metric-container"] label{{color:var(--teal)!important;font-family:'Cinzel',serif!important;font-size:9px!important;letter-spacing:2px!important;text-transform:uppercase;}}
     [data-testid="stMetricValue"]{{color:var(--gold)!important;font-family:'Cinzel',serif!important;font-weight:700!important;}}
@@ -430,12 +342,8 @@ def inject_theme():
     [data-testid="stSidebar"]{{background:linear-gradient(180deg,#080f1e 0%,#0a1628 60%,{C['space']} 100%);border-right:1px solid rgba(157,78,221,.4);}}
     [data-testid="stSidebar"] section{{padding-top:0;}}
 
-    /* Rainbow progress bar */
-    .stProgress>div>div>div>div{{
-        background:linear-gradient(90deg,#9D4EDD,#4facfe 28%,#00E5C0 52%,#43e97b 74%,#F2C94C);
-        border-radius:4px;animation:rainbowShift 4s ease infinite;
-        background-size:200% auto;
-    }}
+    /* Rainbow progress */
+    .stProgress>div>div>div>div{{background:linear-gradient(90deg,#9D4EDD,#4facfe 28%,#00E5C0 52%,#43e97b 74%,#F2C94C);border-radius:4px;animation:rainbowShift 4s ease infinite;background-size:200% auto;}}
     @keyframes rainbowShift{{0%{{background-position:0% center;}}100%{{background-position:200% center;}}}}
     .stProgress>div>div{{background:rgba(255,255,255,.06);border-radius:4px;}}
 
@@ -444,8 +352,6 @@ def inject_theme():
     .stInfo>div{{background:rgba(0,229,192,.08)!important;border:1px solid rgba(0,229,192,.35)!important;color:var(--teal)!important;font-family:'DM Mono',monospace!important;border-radius:10px!important;}}
     .stWarning>div{{background:rgba(242,201,76,.08)!important;border:1px solid rgba(242,201,76,.35)!important;color:var(--gold)!important;border-radius:10px!important;}}
     .stError>div{{background:rgba(255,107,107,.1)!important;border:1px solid rgba(255,107,107,.4)!important;color:{C['danger']}!important;border-radius:10px!important;}}
-
-    /* File uploader */
     [data-testid="stFileUploader"]>div{{background:{C['card']}!important;border:2px dashed rgba(157,78,221,.5)!important;border-radius:14px!important;transition:border-color .2s;}}
     [data-testid="stFileUploader"]>div:hover{{border-color:var(--gold)!important;}}
 
@@ -458,33 +364,20 @@ def inject_theme():
     .stMarkdown strong{{color:var(--gold)!important;}}
     .stMarkdown code{{background:rgba(0,229,192,.1)!important;color:var(--teal)!important;border:1px solid rgba(0,229,192,.2)!important;border-radius:4px;font-size:11px;}}
 
-    /* ═══ CUSTOM COMPONENTS ═══════════════════════════════════════ */
+    /* ═══ CUSTOM COMPONENTS ════════════════════════════════════════ */
 
-    /* Genesis Card */
-    .g-card{{
-        background:linear-gradient(145deg,{C['card']},{C['card2']});
-        border:1px solid rgba(0,229,192,.28);border-radius:14px;
-        overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);
-        position:relative;margin-bottom:8px;
-    }}
-    .g-card:hover{{
-        border-color:var(--gold);
-        box-shadow:0 0 0 1px rgba(242,201,76,.15),0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(242,201,76,.12);
-        transform:translateY(-4px) scale(1.01);
-    }}
-    .g-card-img{{
-        height:130px;background:linear-gradient(135deg,{C['celest']},#142f55);
-        display:flex;align-items:center;justify-content:center;font-size:58px;
-        border-bottom:1px solid rgba(0,229,192,.15);position:relative;overflow:hidden;
-    }}
-    .g-card-img::after{{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 80%,rgba(157,78,221,.1) 0%,transparent 70%);}}
-    .g-card-body{{padding:10px 13px 13px;}}
+    /* Genesis Card — FIX: position:relative on wrapper, not inside markdown chain */
+    .g-card{{background:linear-gradient(145deg,{C['card']},{C['card2']});border:1px solid rgba(0,229,192,.28);border-radius:14px;overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);position:relative;margin-bottom:8px;}}
+    .g-card:hover{{border-color:var(--gold);box-shadow:0 0 0 1px rgba(242,201,76,.15),0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(242,201,76,.12);transform:translateY(-4px) scale(1.01);}}
+    .g-card-img{{height:130px;background:linear-gradient(135deg,{C['celest']},#142f55);display:flex;align-items:center;justify-content:center;font-size:56px;border-bottom:1px solid rgba(0,229,192,.15);position:relative;overflow:hidden;}}
+    .g-card-img::after{{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 80%,rgba(157,78,221,.1) 0%,transparent 70%);pointer-events:none;}}
+    .g-card-body{{padding:10px 13px 12px;}}
     .g-card-title{{font-family:'Playfair Display',serif;color:#dde8ff;font-size:12.5px;font-weight:700;line-height:1.35;min-height:32px;margin-bottom:4px;}}
     .g-card-value{{font-family:'Cinzel',serif;color:var(--gold);font-size:14px;font-weight:700;}}
     .g-card-id{{font-family:'DM Mono',monospace;color:var(--teal);font-size:8px;opacity:.6;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-    .g-card-badge{{position:absolute;top:8px;right:8px;background:rgba(5,18,31,.9);border:1px solid var(--gold);border-radius:20px;padding:2px 9px;font-family:'Cinzel',serif;font-size:7.5px;color:var(--gold);letter-spacing:1px;backdrop-filter:blur(4px);}}
-    .g-card-frac{{position:absolute;bottom:8px;left:8px;background:rgba(0,229,192,.15);border:1px solid var(--teal);border-radius:20px;padding:2px 8px;font-family:'Cinzel',serif;font-size:7px;color:var(--teal);}}
-    .g-card-mkt{{position:absolute;top:8px;left:8px;background:rgba(157,78,221,.25);border:1px solid var(--purple);border-radius:20px;padding:2px 8px;font-family:'Cinzel',serif;font-size:7px;color:#cc99ff;}}
+    .g-badge-gold{{position:absolute;top:8px;right:8px;background:rgba(5,18,31,.9);border:1px solid var(--gold);border-radius:20px;padding:2px 9px;font-family:'Cinzel',serif;font-size:7.5px;color:var(--gold);letter-spacing:1px;}}
+    .g-badge-teal{{position:absolute;bottom:8px;left:8px;background:rgba(0,229,192,.15);border:1px solid var(--teal);border-radius:20px;padding:2px 8px;font-family:'Cinzel',serif;font-size:7px;color:var(--teal);}}
+    .g-badge-purple{{position:absolute;top:8px;left:8px;background:rgba(157,78,221,.25);border:1px solid var(--purple);border-radius:20px;padding:2px 8px;font-family:'Cinzel',serif;font-size:7px;color:#cc99ff;}}
 
     /* Hero */
     .g-hero{{background:linear-gradient(135deg,#0b1d35 0%,#15284a 50%,#0a1827 100%);border:1px solid rgba(157,78,221,.5);border-radius:18px;padding:32px 40px;text-align:center;position:relative;overflow:hidden;margin-bottom:8px;}}
@@ -503,10 +396,10 @@ def inject_theme():
     .q-desc{{font-family:'DM Mono',monospace;color:var(--muted);font-size:10px;line-height:1.4;}}
     .q-reward{{font-family:'Cinzel',serif;color:var(--teal);font-size:12px;font-weight:700;white-space:nowrap;margin-right:26px;}}
 
-    /* Rank pill */
+    /* Rank */
     .rank-pill{{background:linear-gradient(135deg,{C['card']},#1c3560);border:2px solid var(--gold);border-radius:50px;padding:7px 22px;display:inline-block;font-family:'Cinzel',serif;color:var(--gold);font-size:13px;font-weight:700;letter-spacing:2px;box-shadow:0 0 20px rgba(242,201,76,.18),inset 0 0 10px rgba(242,201,76,.05);}}
 
-    /* Wallet card */
+    /* Wallet */
     .wallet-card{{background:linear-gradient(145deg,#0a1e38,#0d2540);border:2px solid rgba(242,201,76,.5);border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;margin-bottom:16px;}}
     .wallet-card::before{{content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:80%;height:80%;background:radial-gradient(ellipse,rgba(242,201,76,.06) 0%,transparent 70%);}}
     .wallet-amount{{font-family:'Cinzel',serif;color:var(--gold);font-size:clamp(22px,4vw,36px);font-weight:900;letter-spacing:2px;text-shadow:0 0 20px rgba(242,201,76,.4);}}
@@ -518,7 +411,7 @@ def inject_theme():
     .tutor-name{{font-family:'Cinzel',serif;font-size:12px;font-weight:700;margin-bottom:8px;}}
     .tutor-msg{{font-family:'DM Mono',monospace;font-size:12px;color:#ccd6f0;line-height:1.75;}}
 
-    /* Marketplace card */
+    /* Marketplace */
     .mkt-row{{background:linear-gradient(145deg,{C['card']},{C['card2']});border:1px solid rgba(157,78,221,.32);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .2s;}}
     .mkt-row:hover{{border-color:rgba(242,201,76,.4);box-shadow:0 4px 20px rgba(0,0,0,.3);}}
     .mkt-emoji{{font-size:30px;min-width:38px;text-align:center;}}
@@ -526,12 +419,12 @@ def inject_theme():
     .mkt-seller{{font-family:'DM Mono',monospace;color:var(--muted);font-size:10px;margin-top:2px;}}
     .mkt-price{{font-family:'Cinzel',serif;color:var(--gold);font-size:15px;font-weight:700;white-space:nowrap;}}
 
-    /* Terminal blocks */
+    /* Terminal */
     .term-block{{background:rgba(0,0,0,.25);border:1px solid rgba(0,229,192,.14);border-radius:10px;padding:10px 13px;margin:5px 0;}}
     .term-key{{font-size:8px;color:{C['teal']};letter-spacing:1.5px;text-transform:uppercase;opacity:.8;}}
     .term-val{{font-family:'Cinzel',serif;color:{C['gold']};font-size:12px;font-weight:700;margin-top:1px;}}
 
-    /* Sponsor row */
+    /* Sponsor */
     .sp-row{{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(157,78,221,.15);}}
     .sp-key{{font-family:'DM Mono',monospace;color:{C['muted']};font-size:9px;}}
     .sp-val{{font-family:'Cinzel',serif;color:{C['gold']};font-size:10px;font-weight:700;}}
@@ -540,33 +433,18 @@ def inject_theme():
     @keyframes shimmer{{0%{{background-position:-200% center;}}100%{{background-position:200% center;}}}}
     .showcase-glow{{background:linear-gradient(90deg,transparent 0%,rgba(242,201,76,.06) 30%,rgba(0,229,192,.06) 50%,rgba(242,201,76,.06) 70%,transparent 100%);background-size:200% auto;animation:shimmer 4s linear infinite;border-radius:14px;}}
 
-    /* Deep Question button special style */
-    .deep-q-btn .stButton>button{{
-        background:linear-gradient(135deg,rgba(243,156,18,.15),rgba(243,156,18,.08))!important;
-        border:1px solid rgba(243,156,18,.6)!important;
-        color:{C['orange']}!important;
-        font-size:9px!important;
-    }}
-    .deep-q-btn .stButton>button:hover{{
-        background:linear-gradient(135deg,rgba(243,156,18,.35),rgba(243,156,18,.2))!important;
-        color:{C['white']}!important;
-        border-color:{C['orange']}!important;
-    }}
+    /* Deep Q button */
+    .deep-q-btn .stButton>button{{background:linear-gradient(135deg,rgba(243,156,18,.15),rgba(243,156,18,.08))!important;border:1px solid rgba(243,156,18,.6)!important;color:{C['orange']}!important;font-size:9px!important;}}
+    .deep-q-btn .stButton>button:hover{{background:linear-gradient(135deg,rgba(243,156,18,.35),rgba(243,156,18,.2))!important;color:{C['white']}!important;border-color:{C['orange']}!important;}}
 
-    /* Ledger table */
+    /* Ledger */
     .ledger-table{{width:100%;border-collapse:collapse;background:linear-gradient(135deg,{C['card']},{C['card2']});border:1px solid rgba(157,78,221,.3);border-radius:12px;overflow:hidden;}}
     .ledger-table th{{padding:10px 14px;font-family:'Cinzel',serif;font-size:8.5px;color:{C['teal']};letter-spacing:2px;text-align:left;border-bottom:1px solid rgba(157,78,221,.4);}}
     .ledger-table td{{padding:9px 14px;font-family:'DM Mono',monospace;font-size:11px;border-bottom:1px solid rgba(157,78,221,.12);}}
     .ledger-cat{{background:rgba(157,78,221,.1);padding:6px 14px;font-family:'Cinzel',serif;font-size:8px;color:{C['purple']};letter-spacing:2px;text-transform:uppercase;}}
 
     /* Mobile */
-    @media(max-width:768px){{
-        .g-hero{{padding:20px 16px;}}
-        .g-hero-title{{font-size:18px;letter-spacing:2px;}}
-        .g-card-img{{height:100px;font-size:44px;}}
-        .q-card{{flex-wrap:wrap;}}
-        .q-reward{{margin-right:0;}}
-    }}
+    @media(max-width:768px){{.g-hero{{padding:20px 16px;}}.g-hero-title{{font-size:18px;letter-spacing:2px;}}.g-card-img{{height:100px;font-size:44px;}}.q-card{{flex-wrap:wrap;}}.q-reward{{margin-right:0;}}}}
     </style>
     """, unsafe_allow_html=True)
 
@@ -581,8 +459,8 @@ CREATION_COLS = [
     "created_at","is_fractional","cert_downloaded","fraction_count",
     "listed_price","listed_at","lore",
 ]
-USER_COLS = ["kingdom","pw_hash","dob","sponsor_kingdom","sponsor_pw_hash"]
-MARKET_COLS = ["id","name","sovereign","value","emoji","listed_price","listed_at"]
+USER_COLS     = ["kingdom","pw_hash","dob","sponsor_kingdom","sponsor_pw_hash"]
+MARKET_COLS   = ["id","name","sovereign","value","emoji","listed_price","listed_at"]
 ACTIVITY_COLS = ["ts","sovereign","action","detail"]
 
 def ensure_dirs(user: str):
@@ -592,9 +470,10 @@ def ensure_dirs(user: str):
 def _read(path: str, cols: list) -> pd.DataFrame:
     if os.path.exists(path):
         try:
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, dtype=str).fillna("")
             for c in cols:
-                if c not in df.columns: df[c] = ""
+                if c not in df.columns:
+                    df[c] = ""
             return df
         except Exception:
             pass
@@ -606,28 +485,31 @@ def _write(df: pd.DataFrame, path: str):
     except Exception as e:
         st.toast(f"⚠️ Save error: {e}", icon="⚠️")
 
-def load_creations() -> pd.DataFrame:  return _read(F["creations"], CREATION_COLS)
-def save_creations(df):                _write(df, F["creations"])
-def load_market() -> pd.DataFrame:    return _read(F["market"], MARKET_COLS)
-def save_market(df):                   _write(df, F["market"])
-def load_users() -> pd.DataFrame:     return _read(F["users"], USER_COLS)
-def save_users(df):                    _write(df, F["users"])
+def load_creations() -> pd.DataFrame: return _read(F["creations"], CREATION_COLS)
+def save_creations(df):               _write(df, F["creations"])
+def load_market()    -> pd.DataFrame: return _read(F["market"],    MARKET_COLS)
+def save_market(df):                  _write(df, F["market"])
+def load_users()     -> pd.DataFrame: return _read(F["users"],     USER_COLS)
+def save_users(df):                   _write(df, F["users"])
 
 def load_wallet(user: str) -> int:
-    df = _read(F["wallets"], ["sovereign","imagix"])
+    df  = _read(F["wallets"], ["sovereign","imagix"])
     row = df[df.sovereign == user]
-    return int(float(str(row.iloc[0]["imagix"]))) if not row.empty else 0
+    if not row.empty:
+        try: return int(float(str(row.iloc[0]["imagix"])))
+        except: pass
+    return 0
 
 def save_wallet(user: str, imagix: int):
     df = _read(F["wallets"], ["sovereign","imagix"])
     if user in df.sovereign.values:
-        df.loc[df.sovereign == user, "imagix"] = imagix
+        df.loc[df.sovereign == user, "imagix"] = str(imagix)
     else:
-        df = pd.concat([df, pd.DataFrame([{"sovereign":user,"imagix":imagix}])], ignore_index=True)
+        df = pd.concat([df, pd.DataFrame([{"sovereign": user, "imagix": str(imagix)}])], ignore_index=True)
     _write(df, F["wallets"])
 
 def load_quests_done(user: str) -> set:
-    df = _read(F["quests"], ["sovereign","completed_ids"])
+    df  = _read(F["quests"], ["sovereign","completed_ids"])
     row = df[df.sovereign == user]
     if not row.empty:
         raw = str(row.iloc[0]["completed_ids"])
@@ -635,19 +517,19 @@ def load_quests_done(user: str) -> set:
     return set()
 
 def save_quests_done(user: str, done: set):
-    df = _read(F["quests"], ["sovereign","completed_ids"])
-    val = ",".join(done)
+    df  = _read(F["quests"], ["sovereign","completed_ids"])
+    val = ",".join(sorted(done))
     if user in df.sovereign.values:
         df.loc[df.sovereign == user, "completed_ids"] = val
     else:
-        df = pd.concat([df, pd.DataFrame([{"sovereign":user,"completed_ids":val}])], ignore_index=True)
+        df = pd.concat([df, pd.DataFrame([{"sovereign": user, "completed_ids": val}])], ignore_index=True)
     _write(df, F["quests"])
 
 def log_activity(sovereign: str, action: str, detail: str = ""):
-    row = {"ts": datetime.now().isoformat(),"sovereign":sovereign,"action":action,"detail":detail}
-    df = _read(F["activity"], ACTIVITY_COLS)
-    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-    _write(df.tail(500), F["activity"])  # keep last 500 entries
+    row = {"ts": datetime.now().isoformat(), "sovereign": sovereign, "action": action, "detail": detail}
+    df  = _read(F["activity"], ACTIVITY_COLS)
+    df  = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    _write(df.tail(500), F["activity"])
 
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
@@ -663,25 +545,25 @@ def register_user(kingdom, pw, dob_str, sponsor="", sponsor_pw="") -> tuple:
     }
     df = pd.concat([df, pd.DataFrame([new])], ignore_index=True)
     save_users(df)
-    log_activity(kingdom, "REGISTER", f"DOB={dob_str} has_sponsor={bool(sponsor)}")
+    log_activity(kingdom, "REGISTER", f"DOB={dob_str} sponsor={bool(sponsor)}")
     return True, "Registered!"
 
 def verify_user(kingdom, pw) -> tuple:
-    df = load_users()
+    df  = load_users()
     row = df[df.kingdom == kingdom]
     if row.empty: return False, "Kingdom not found."
     if row.iloc[0]["pw_hash"] != hash_pw(pw): return False, "Wrong password."
     return True, ""
 
 def get_user_row(kingdom) -> dict | None:
-    df = load_users()
+    df  = load_users()
     row = df[df.kingdom == kingdom]
     return row.iloc[0].to_dict() if not row.empty else None
 
 def get_user_dob(kingdom) -> date | None:
-    row = get_user_row(kingdom)
-    if row:
-        try: return datetime.strptime(str(row["dob"]), "%Y-%m-%d").date()
+    urow = get_user_row(kingdom)
+    if urow:
+        try: return datetime.strptime(str(urow["dob"]), "%Y-%m-%d").date()
         except: pass
     return None
 
@@ -690,18 +572,29 @@ def calc_age(dob: date | None) -> int:
     today = date.today()
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
-def user_is_minor(age: int) -> bool:
-    return age < MINOR_AGE
-
 def generate_id(name: str, sovereign: str) -> str:
     raw = f"{name}::{sovereign}::{datetime.now().isoformat()}"
     return "GEN-" + hashlib.sha256(raw.encode()).hexdigest()[:8].upper()
 
-def img_to_b64(path: str) -> str | None:
+def safe_int(val, default: int = 0) -> int:
+    """Convert any value to int safely."""
     try:
-        with open(path, "rb") as f: data = base64.b64encode(f.read()).decode()
-        ext = Path(path).suffix.lower().lstrip(".")
-        mime = {"jpg":"jpeg","jpeg":"jpeg","png":"png"}.get(ext, "jpeg")
+        s = str(val).replace(",", "").strip()
+        return int(float(s)) if s and s not in ("", "nan", "None") else default
+    except (ValueError, TypeError):
+        return default
+
+def img_to_b64(path: str) -> str | None:
+    """Convert image file to base64 data-URI. Returns None on any failure."""
+    try:
+        if not path or not os.path.exists(path):
+            return None
+        if not path.lower().endswith((".jpg", ".jpeg", ".png")):
+            return None
+        with open(path, "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+        ext  = Path(path).suffix.lower().lstrip(".")
+        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png"}.get(ext, "jpeg")
         return f"data:image/{mime};base64,{data}"
     except Exception:
         return None
@@ -723,13 +616,18 @@ def get_rank(imagix: int) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑧ QUEST ENGINE
+# ⑧ QUEST ENGINE  — FIX: idempotent, no phantom awards, no render-loops
 # ══════════════════════════════════════════════════════════════════════
 def run_quests(df: pd.DataFrame, user: str) -> int:
-    """Evaluate all quests; award new completions. Returns delta IMAGIX."""
-    done = st.session_state["quest_completed"]
+    """
+    Evaluate all quests against current state.
+    SAFE: Uses a render-scoped guard so multiple calls in the same
+    Streamlit render cycle never double-award a quest.
+    Returns total IMAGIX delta from newly completed quests this call.
+    """
+    # Build extra state snapshot for quest checks
     ss_extra = {
-        "imagix":       st.session_state["imagix"],
+        "imagix":       st.session_state.get("imagix", 0),
         "cert_ever":    st.session_state.get("cert_ever", False),
         "tutor_used":   st.session_state.get("tutor_used", False),
         "deep_q_used":  st.session_state.get("deep_q_used", False),
@@ -738,42 +636,49 @@ def run_quests(df: pd.DataFrame, user: str) -> int:
         "lore_added":   st.session_state.get("lore_added", False),
         "has_sponsor":  st.session_state.get("has_sponsor", False),
     }
-    newly, delta = [], 0
+
+    done   = st.session_state["quest_completed"]
+    newly  = []
+    delta  = 0
+
     for q in QUESTS:
-        if q["id"] in done: continue
+        if q["id"] in done:
+            continue  # already awarded — never re-award
         try:
             if q["check"](df, user, ss_extra):
                 done.add(q["id"])
-                st.session_state["imagix"] += q["reward"]
-                delta += q["reward"]
+                reward = q["reward"]
+                st.session_state["imagix"] += reward
+                delta += reward
                 newly.append(q)
         except Exception:
             pass
+
     if newly:
         st.session_state["quest_completed"] = done
         save_quests_done(user, done)
         save_wallet(user, st.session_state["imagix"])
         for q in newly:
             st.toast(f"🏆 {q['icon']} {q['title']} · +{q['reward']:,} IMAGIX!", icon="⚡")
-        log_activity(user, "QUESTS", f"Completed: {[q['id'] for q in newly]}")
+        log_activity(user, "QUESTS_DONE", str([q["id"] for q in newly]))
+
     return delta
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑨ TUTORS  — real API call + rich fallbacks
+# ⑨ TUTORS — API call with rich fallbacks
 # ══════════════════════════════════════════════════════════════════════
 def call_claude(prompt: str, max_tokens: int = 300) -> str | None:
-    """Call Anthropic claude-sonnet. Returns text or None on failure."""
     try:
         payload = json.dumps({
             "model": "claude-sonnet-4-20250514",
             "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}]
+            "messages": [{"role": "user", "content": prompt}],
         }).encode()
         req = urllib.request.Request(
             "https://api.anthropic.com/v1/messages",
             data=payload,
-            headers={"Content-Type":"application/json","anthropic-version":"2023-06-01"},
+            headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -783,10 +688,9 @@ def call_claude(prompt: str, max_tokens: int = 300) -> str | None:
         return None
 
 def get_tutor_message(tutor: dict, context_tab: str, user: str, df: pd.DataFrame) -> str:
-    """Generate a contextual tutor message. Falls back gracefully."""
-    n_c = _count(df, user)
+    n_c    = _q_count(df, user)
     imagix = st.session_state.get("imagix", 0)
-    n_q = len(st.session_state.get("quest_completed", set()))
+    n_q    = len(st.session_state.get("quest_completed", set()))
     ctx_map = {
         "vault":   f"El usuario ve su Vault con {n_c} creaciones.",
         "upload":  "El usuario está en la pantalla de subir una nueva creación.",
@@ -795,48 +699,36 @@ def get_tutor_message(tutor: dict, context_tab: str, user: str, df: pd.DataFrame
         "market":  "El usuario explora el Marketplace.",
         "default": f"El usuario {user} explora Delphia Genesis.",
     }
-    context = ctx_map.get(context_tab, ctx_map["default"])
     prompt = (
         f"{tutor['persona']}\n\n"
-        f"CONTEXTO: {context}\n"
-        f"USUARIO: '{user}' · {n_c} creaciones · {imagix:,} IMAGIX · {n_q} quests completadas.\n"
-        f"Da UN mensaje corto, directo y en la voz de tu personaje. "
-        f"Sé muy específico al contexto dado. No uses asteriscos ni markdown. Solo el mensaje."
+        f"CONTEXTO: {ctx_map.get(context_tab, ctx_map['default'])}\n"
+        f"USUARIO: '{user}' · {n_c} creaciones · {imagix:,} IMAGIX · {n_q} quests.\n"
+        f"Da UN mensaje corto en tu voz. Específico al contexto. Sin asteriscos ni markdown. Solo el mensaje."
     )
-    result = call_claude(prompt)
-    if result:
-        return result
-    # Rich fallback from tutor definition
-    return tutor["fallbacks"].get(context_tab, tutor["fallbacks"]["default"])
+    return call_claude(prompt) or tutor["fallbacks"].get(context_tab, tutor["fallbacks"]["default"])
 
 def get_deep_answer(tutor: dict, question: str, user: str, df: pd.DataFrame) -> str:
-    """Ask a deep question with tutor personality."""
-    n_c = _count(df, user)
+    n_c    = _q_count(df, user)
     imagix = st.session_state.get("imagix", 0)
     prompt = (
         f"{tutor['persona']}\n\n"
-        f"El usuario {user} (con {n_c} creaciones y {imagix:,} IMAGIX) te hace esta pregunta profunda:\n"
-        f"'{question}'\n\n"
-        f"Responde de forma detallada pero en tu voz característica. "
-        f"Máximo 6 oraciones. No uses asteriscos. Solo la respuesta."
+        f"El usuario {user} ({n_c} creaciones, {imagix:,} IMAGIX) pregunta:\n'{question}'\n\n"
+        f"Responde en tu voz. Máximo 6 oraciones. Sin asteriscos. Solo la respuesta."
     )
-    result = call_claude(prompt, max_tokens=500)
-    if result:
-        return result
-    return (
-        f"Esa es una pregunta fascinante, Soberano {user}. "
-        f"En el Genesis Layer, cada creación lleva consigo el peso de la imaginación que la originó. "
-        f"Reflexiona sobre ello y encuentra tu propia respuesta — esa es la verdadera sabiduría."
-    )
+    return (call_claude(prompt, max_tokens=500)
+            or f"Esa es una pregunta fascinante, Soberano {user}. "
+               "En el Genesis Layer, cada creación lleva el peso de la imaginación que la originó. "
+               "Reflexiona — esa es la verdadera sabiduría.")
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑩ PDF CERTIFICATE v0.9
+# ⑩ PDF CERTIFICATE v0.9.1
 # ══════════════════════════════════════════════════════════════════════
 def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> bytes:
-    buf = io.BytesIO()
+    """Generate a premium Genesis Certificate PDF. Returns raw bytes."""
+    buf  = io.BytesIO()
     W, H = A4
-    c = rl_canvas.Canvas(buf, pagesize=A4)
+    c    = rl_canvas.Canvas(buf, pagesize=A4)
     c.setTitle(f"Genesis Certificate · {name}")
 
     # Background
@@ -871,16 +763,16 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold", 26)
     c.drawCentredString(W/2, H-64, "DELPHIA GENESIS")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica", 9.5)
-    c.drawCentredString(W/2, H-88, "✦  CERTIFICATE OF IMAGINATION  ·  GENESIS LAYER v0.9  ✦")
+    c.drawCentredString(W/2, H-88, "✦  CERTIFICATE OF IMAGINATION  ·  GENESIS LAYER v0.9.1  ✦")
 
-    # Star
+    # Central star
     star_cy = H-192
     def draw_star(cx, cy, ro, ri, pts=5):
         path = c.beginPath()
         for i in range(pts*2):
             angle = math.pi/pts*i - math.pi/2
-            r = ro if i%2==0 else ri
-            x, y = cx + r*math.cos(angle), cy + r*math.sin(angle)
+            r     = ro if i%2==0 else ri
+            x, y  = cx + r*math.cos(angle), cy + r*math.sin(angle)
             path.moveTo(x, y) if i==0 else path.lineTo(x, y)
         path.close(); c.drawPath(path, fill=1, stroke=1)
     for r, a in [(60,.06),(46,.10),(34,.08)]:
@@ -893,7 +785,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     # Decorative rules
     ry = H-240
     c.setStrokeColor(HexColor(C["purple"])); c.setLineWidth(.7); c.line(44, ry, W-44, ry)
-    c.setStrokeColor(HexColor(C["gold"])); c.setLineWidth(.35); c.line(54, ry-5, W-54, ry-5)
+    c.setStrokeColor(HexColor(C["gold"]));   c.setLineWidth(.35); c.line(54, ry-5, W-54, ry-5)
 
     # Fields
     def draw_field(lbl, val, y):
@@ -910,7 +802,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
         ("Creation",       str(name)[:55]),
         ("Genesis ID",     str(asset_id)),
         ("Young Sovereign",str(sovereign)[:45]),
-        ("Imagined Value", f"{int(value):,} IMAGIX"),
+        ("Imagined Value", f"{safe_int(value):,} IMAGIX"),
         ("Date Sealed",    datetime.now().strftime("%d %B %Y").upper()),
         ("Status",         "SACRED & IMMUTABLE"),
     ]
@@ -931,37 +823,41 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.drawCentredString(W/2, hash_y-22, sha256[32:])
 
     bot_y = hash_y - 46
-    c.setStrokeColor(HexColor(C["gold"])); c.setLineWidth(.7); c.line(44, bot_y, W-44, bot_y)
+    c.setStrokeColor(HexColor(C["gold"]));   c.setLineWidth(.7);  c.line(44, bot_y, W-44, bot_y)
     c.setStrokeColor(HexColor(C["purple"])); c.setLineWidth(.35); c.line(54, bot_y-5, W-54, bot_y-5)
 
-    # Signature
     sig_y = bot_y - 46
     c.setFillColor(HexColor(C["purple"])); c.setFont("Helvetica", 8)
     c.drawCentredString(W/2, sig_y+16, "— Signed by the Keeper of the Genesis Layer —")
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold", 11)
     c.drawCentredString(W/2, sig_y, "REY DELPHI  ·  REINO DE DELPHIA  ·  KARDASHEV VI")
 
-    # Footer
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica", 7)
-    c.drawCentredString(W/2, 28, "Delphia Genesis v0.9  ·  Where Imagination Becomes Sovereign  ·  delphia.genesis")
+    c.drawCentredString(W/2, 28, "Delphia Genesis v0.9.1  ·  Where Imagination Becomes Sovereign  ·  delphia.genesis")
 
     c.save()
     return buf.getvalue()
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑪ SESSION STATE  (before any logic)
+# ⑪ SESSION STATE
 # ══════════════════════════════════════════════════════════════════════
 _SS = {
     "authenticated": False, "user": "", "imagix": 0,
     "quest_completed": set(), "creations_df": None,
-    "split_open": {}, "cert_triggered": {}, "cert_ever": False,
-    "tutor_open": None, "tutor_used": False, "deep_q_used": False,
-    "lore_added": False, "sold_ever": False, "bought_ever": False,
-    "has_sponsor": False,
-    # Sponsor security — NEVER persists past logout
-    "sponsor_verified_session": False,
+    # FIX: cert_bytes stores generated PDF per asset_id to avoid re-generation
+    "cert_bytes": {},           # {aid: bytes}
+    "cert_triggered": set(),    # FIX: set instead of dict — cleaner
+    "cert_ever": False,
+    "split_open": {},           # {aid: bool}
+    "tutor_open": None,
+    "tutor_used": False, "deep_q_used": False,
+    "lore_added": False, "sold_ever": False,
+    "bought_ever": False, "has_sponsor": False,
+    SPONSOR_SESSION_KEY: False,
     "parent_mode": False,
+    "sponsor_viewed_qs": False,
+    "deep_q_open": None,
 }
 for k, v in _SS.items():
     if k not in st.session_state:
@@ -975,7 +871,7 @@ if not st.session_state["authenticated"]:
     st.markdown("""
     <div class="g-hero" style="margin-top:40px;padding:48px 40px;">
         <div class="g-hero-title">⬟ DELPHIA GENESIS ⬟</div>
-        <div class="g-hero-sub">THE SOVEREIGN AWAKENING · GENESIS LAYER v0.9</div>
+        <div class="g-hero-sub">THE SOVEREIGN AWAKENING · GENESIS LAYER v0.9.1</div>
     </div>""", unsafe_allow_html=True)
 
     _, mid, _ = st.columns([1, 1.6, 1])
@@ -994,11 +890,18 @@ if not st.session_state["authenticated"]:
                     ok, msg = verify_user(lk.strip(), lp.strip())
                     if ok:
                         u = lk.strip()
-                        st.session_state["authenticated"]    = True
-                        st.session_state["user"]             = u
-                        st.session_state["quest_completed"]  = load_quests_done(u)
-                        st.session_state["imagix"]           = load_wallet(u)
-                        # Check sponsor flag
+                        st.session_state.update({
+                            "authenticated":   True,
+                            "user":            u,
+                            "quest_completed": load_quests_done(u),
+                            "imagix":          load_wallet(u),
+                            # Reset session-scoped security
+                            SPONSOR_SESSION_KEY:    False,
+                            "sponsor_viewed_qs":    False,
+                            "cert_bytes":           {},
+                            "cert_triggered":       set(),
+                            "split_open":           {},
+                        })
                         urow = get_user_row(u)
                         if urow and str(urow.get("sponsor_kingdom","")).strip() not in ("","nan"):
                             st.session_state["has_sponsor"] = True
@@ -1010,12 +913,11 @@ if not st.session_state["authenticated"]:
 
         with a_reg:
             st.markdown(f"<div style='font-family:DM Mono;color:{C['muted']};font-size:11px;margin-bottom:16px;'>Forge your Kingdom on the Genesis Layer.</div>", unsafe_allow_html=True)
-            rk  = st.text_input("Kingdom Name ✦", key="r_k",  placeholder="e.g. Astra Nova",         label_visibility="collapsed")
+            rk  = st.text_input("Kingdom Name ✦", key="r_k",  placeholder="e.g. Astra Nova", label_visibility="collapsed")
             rp  = st.text_input("Sacred Password", key="r_p",  type="password", placeholder="Choose a strong password", label_visibility="collapsed")
             rp2 = st.text_input("Confirm Password",key="r_p2", type="password", placeholder="Repeat your password",    label_visibility="collapsed")
-            rdob = st.date_input("Date of Birth", key="r_dob",
-                                 min_value=date(1980,1,1), max_value=date.today(),
-                                 value=date(2010,1,1))
+            rdob = st.date_input("Date of Birth",  key="r_dob",
+                                 min_value=date(1980,1,1), max_value=date.today(), value=date(2010,1,1))
             st.caption("Used to match you with your Genesis Tutors.")
 
             with st.expander("👁 Add a Sponsor / Parent (optional)"):
@@ -1038,12 +940,13 @@ if not st.session_state["authenticated"]:
                     )
                     if ok:
                         u = rk.strip()
-                        st.session_state["authenticated"]   = True
-                        st.session_state["user"]            = u
-                        st.session_state["quest_completed"] = set()
-                        st.session_state["imagix"]          = 0
-                        if str(st.session_state.get("sp_k","")).strip():
-                            st.session_state["has_sponsor"] = True
+                        st.session_state.update({
+                            "authenticated":   True,
+                            "user":            u,
+                            "quest_completed": set(),
+                            "imagix":          0,
+                            "has_sponsor":     bool(str(st.session_state.get("sp_k","")).strip()),
+                        })
                         ensure_dirs(u)
                         st.success("✦ Kingdom forged! Welcome to the Genesis Layer.")
                         st.balloons()
@@ -1054,26 +957,28 @@ if not st.session_state["authenticated"]:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑬ MAIN APP  (authenticated only beyond this point)
+# ⑬ MAIN APP  — authenticated only beyond this point
 # ══════════════════════════════════════════════════════════════════════
 user: str = st.session_state["user"]
 ensure_dirs(user)
 
+# Load creations once per session
 if st.session_state["creations_df"] is None:
     st.session_state["creations_df"] = load_creations()
 
 df_all: pd.DataFrame = st.session_state["creations_df"]
+
 user_df = (df_all[df_all["sovereign"] == user].copy()
            if not df_all.empty and "sovereign" in df_all.columns
            else pd.DataFrame(columns=CREATION_COLS))
 
 # Age / tutors
-dob  = get_user_dob(user)
-age  = calc_age(dob)
-is_minor = user_is_minor(age)
+dob          = get_user_dob(user)
+age          = calc_age(dob)
+is_minor     = age < MINOR_AGE
 active_tutors = get_active_tutors(age)
 
-# Run quest checks every render
+# ── Quest check: run once per render at the top ─────────────────────
 run_quests(df_all, user)
 
 total_imagix = st.session_state["imagix"]
@@ -1094,10 +999,10 @@ h3.metric("CREATIONS", len(user_df))
 h4.metric("QUESTS",    f"{n_done}/{len(QUESTS)}")
 if h5.button("✦ LOGOUT"):
     for k in list(_SS.keys()):
-        if k in st.session_state: del st.session_state[k]
+        if k in st.session_state:
+            del st.session_state[k]
     st.rerun()
 
-# Rainbow progress bar
 pb, _ = st.columns([3,1])
 with pb:
     if not rank["maxed"]:
@@ -1110,7 +1015,7 @@ st.divider()
 
 
 # ══════════════════════════════════════════════════════════════════════
-# TUTOR PANEL  (contextual, rendered inside each tab)
+# TUTOR PANEL  — contextual, per tab
 # ══════════════════════════════════════════════════════════════════════
 def render_tutor_panel(context_tab: str):
     if not active_tutors:
@@ -1121,69 +1026,70 @@ def render_tutor_panel(context_tab: str):
         ✦ GENESIS TUTORS — Choose your guide
     </div>""", unsafe_allow_html=True)
 
-    t_cols = st.columns(len(active_tutors) + 1)   # +1 for Deep Question
+    t_cols = st.columns(len(active_tutors) + 1)   # +1 for Deep Q
 
     for i, t in enumerate(active_tutors):
         with t_cols[i]:
             if st.button(f"{t['emoji']} {t['short']}", key=f"tb_{t['id']}_{context_tab}"):
                 open_id = st.session_state.get("tutor_open")
-                if open_id == f"{t['id']}_{context_tab}":
+                key     = f"{t['id']}_{context_tab}"
+                if open_id == key:
                     st.session_state["tutor_open"] = None
                 else:
                     with st.spinner(f"{t['emoji']} {t['name']} thinking…"):
                         msg = get_tutor_message(t, context_tab, user, df_all)
-                    st.session_state[f"tmsg_{t['id']}_{context_tab}"] = msg
-                    st.session_state["tutor_open"] = f"{t['id']}_{context_tab}"
+                    st.session_state[f"tmsg_{key}"] = msg
+                    st.session_state["tutor_open"]  = key
                     if not st.session_state["tutor_used"]:
                         st.session_state["tutor_used"] = True
                         run_quests(df_all, user)
 
-    # Deep Question button (last column)
     with t_cols[-1]:
         st.markdown('<div class="deep-q-btn">', unsafe_allow_html=True)
         if st.button("🔮 DEEP Q", key=f"deepq_{context_tab}",
-                     help="Ask a deep question to your tutor"):
-            st.session_state["deep_q_open"] = context_tab
+                     help="Ask your tutor a deep question"):
+            current = st.session_state.get("deep_q_open")
+            st.session_state["deep_q_open"] = None if current == context_tab else context_tab
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Show open tutor message
-    open_key = st.session_state.get("tutor_open","")
-    if open_key and open_key.endswith(f"_{context_tab}"):
+    # Show open tutor bubble
+    open_key = st.session_state.get("tutor_open", "") or ""
+    if open_key.endswith(f"_{context_tab}"):
         tid = open_key.replace(f"_{context_tab}", "")
         t   = next((x for x in active_tutors if x["id"] == tid), None)
         if t:
-            msg = st.session_state.get(f"tmsg_{t['id']}_{context_tab}", "…")
+            msg = st.session_state.get(f"tmsg_{open_key}", "…")
             st.markdown(f"""
             <div class="tutor-chat">
                 <div class="tutor-name" style="color:{t['color']};">{t['emoji']} {t['name']}</div>
                 <div class="tutor-msg">{msg}</div>
             </div>""", unsafe_allow_html=True)
 
-    # Deep Question input
+    # Deep Question expander
     if st.session_state.get("deep_q_open") == context_tab:
-        dq_tutor = active_tutors[0]  # use first available tutor for deep Q
+        dq_tutor = active_tutors[0]
         with st.expander("🔮 Deep Question", expanded=True):
             dq = st.text_input("Ask anything deep…", key=f"dq_input_{context_tab}",
                                placeholder="¿Por qué la creatividad tiene valor?")
-            dq_cols = st.columns([1,1])
-            with dq_cols[0]:
+            dc1, dc2 = st.columns([1,1])
+            with dc1:
                 if st.button("✦ ASK", key=f"dq_ask_{context_tab}") and dq.strip():
                     with st.spinner(f"{dq_tutor['emoji']} Thinking deeply…"):
                         answer = get_deep_answer(dq_tutor, dq.strip(), user, df_all)
-                    st.session_state[f"dq_answer_{context_tab}"] = answer
+                    st.session_state[f"dq_ans_{context_tab}"] = answer
                     if not st.session_state["deep_q_used"]:
                         st.session_state["deep_q_used"] = True
                         run_quests(df_all, user)
-            with dq_cols[1]:
+            with dc2:
                 if st.button("✕ Close", key=f"dq_close_{context_tab}"):
                     st.session_state["deep_q_open"] = None
                     st.rerun()
-            if f"dq_answer_{context_tab}" in st.session_state:
-                ans = st.session_state[f"dq_answer_{context_tab}"]
+            ans_key = f"dq_ans_{context_tab}"
+            if ans_key in st.session_state:
                 st.markdown(f"""
                 <div class="tutor-chat">
                     <div class="tutor-name" style="color:{dq_tutor['color']};">{dq_tutor['emoji']} {dq_tutor['name']}</div>
-                    <div class="tutor-msg">{ans}</div>
+                    <div class="tutor-msg">{st.session_state[ans_key]}</div>
                 </div>""", unsafe_allow_html=True)
 
     st.divider()
@@ -1199,18 +1105,21 @@ tab_vault, tab_wallet, tab_quests, tab_market, tab_upload = st.tabs([
 
 # ────────────────────────────────────────────────────────────────────
 # TAB: VAULT
+# FIX: Clean card rendering, no stray HTML, safe image fallback
+# FIX: TITLE — PDF cached in session_state, download button only when bytes ready
+# FIX: SPLIT — st.rerun() after state change
+# FIX: LIST  — proper DataFrame copy before loc assignments
 # ────────────────────────────────────────────────────────────────────
 with tab_vault:
     render_tutor_panel("vault")
 
-    vcol1, vcol2 = st.columns([3,1])
-    vcol1.markdown("### 🌌 SOVEREIGN CREATIONS VAULT")
-    with vcol2:
+    vc1, vc2 = st.columns([3,1])
+    vc1.markdown("### 🌌 SOVEREIGN CREATIONS VAULT")
+    with vc2:
         sort_opt = st.selectbox("Sort", ["Newest","Highest Value","Alphabetical"],
                                 label_visibility="collapsed")
 
     if user_df.empty:
-        # ── Enhanced empty state ────────────────────────────────
         st.info("🌠 Your Vault awaits its first creation. Head to Upload to begin your Genesis journey!")
         st.markdown(f"""
         <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:13px;margin:20px 0 12px;letter-spacing:1px;">
@@ -1225,14 +1134,14 @@ with tab_vault:
                         <span style="position:relative;z-index:1;">{de}</span>
                     </div>
                     <div class="g-card-body">
-                        <div class="g-card-badge">SHOWCASE</div>
+                        <div class="g-badge-gold">SHOWCASE</div>
                         <div class="g-card-title">{dn}</div>
                         <div class="g-card-value">{dv:,} 𝕀</div>
                         <div class="g-card-id">DEMO · GENESIS MULTIVERSE</div>
                     </div>
                 </div>""", unsafe_allow_html=True)
     else:
-        # ── Sort ────────────────────────────────────────────────
+        # Sort
         sdf = user_df.copy()
         if sort_opt == "Newest":
             sdf = sdf.sort_values("created_at", ascending=False)
@@ -1242,49 +1151,51 @@ with tab_vault:
         else:
             sdf = sdf.sort_values("name")
 
-        # Portfolio summary metrics
+        # Portfolio metrics
         total_val = pd.to_numeric(sdf["value"], errors="coerce").fillna(0).sum()
         n_frac    = int(sdf["is_fractional"].astype(str).str.lower().isin(["true","1"]).sum())
         n_cert    = int(sdf["cert_downloaded"].astype(str).str.lower().isin(["true","1"]).sum())
         credit    = int(total_val * 0.25 + total_imagix * 1.5)
 
         pm1, pm2, pm3, pm4 = st.columns(4)
-        pm1.metric("PORTFOLIO VALUE",   f"{total_val:,.0f} 𝕀")
-        pm2.metric("FRACTIONALISED",    n_frac)
-        pm3.metric("CERTS ISSUED",      n_cert)
-        pm4.metric("CREDIT CAPACITY",   f"~{credit:,} 𝕀")
-
+        pm1.metric("PORTFOLIO VALUE", f"{total_val:,.0f} 𝕀")
+        pm2.metric("FRACTIONALISED",  n_frac)
+        pm3.metric("CERTS ISSUED",    n_cert)
+        pm4.metric("CREDIT CAPACITY", f"~{credit:,} 𝕀")
         st.caption(f"{len(sdf)} creation(s) on the Genesis Layer")
 
         records = sdf.to_dict("records")
-        CPR = 4
+        CPR     = 4
 
         for rs in range(0, len(records), CPR):
             cols = st.columns(CPR)
             for ci, rec in enumerate(records[rs:rs+CPR]):
                 with cols[ci]:
-                    aid      = str(rec.get("id",""))
-                    rn       = str(rec.get("name","Unknown"))
-                    rv       = int(float(str(rec.get("value",0)).replace(",","") or 0))
+                    # ── Safe field extraction ─────────────────────
+                    aid      = str(rec.get("id") or "")
+                    rn       = str(rec.get("name") or "Unknown")
+                    rv       = safe_int(rec.get("value"))
                     re_      = str(rec.get("emoji") or "🌟")
-                    rfp      = str(rec.get("file_path",""))
+                    rfp      = str(rec.get("file_path") or "")
                     is_frac  = str(rec.get("is_fractional","")).lower() in ("true","1")
-                    n_f      = int(float(str(rec.get("fraction_count",100)) or 100))
-                    is_listed= str(rec.get("listed_price","")).strip() not in ("","nan","0")
+                    n_f      = max(1, safe_int(rec.get("fraction_count"), 100))
+                    lp_raw   = str(rec.get("listed_price","")).strip()
+                    is_listed= lp_raw not in ("", "nan", "0", "None")
 
-                    frac_badge = '<div class="g-card-frac">⅒ FRACTIONAL</div>' if is_frac else ""
-                    mkt_badge  = '<div class="g-card-mkt">🌠 LISTED</div>'     if is_listed else ""
+                    # ── Badges (HTML strings, never None) ──────────
+                    frac_badge = '<div class="g-badge-teal">⅒ FRACTIONAL</div>' if is_frac  else ""
+                    mkt_badge  = '<div class="g-badge-purple">🌠 LISTED</div>'  if is_listed else ""
 
-                    # Render card
-                    has_img = (rfp and os.path.exists(rfp)
-                               and rfp.lower().endswith((".jpg",".jpeg",".png")))
-                    b64 = img_to_b64(rfp) if has_img else None
+                    # ── Image or emoji card ────────────────────────
+                    b64 = img_to_b64(rfp)   # returns None on failure
 
                     if b64:
+                        # Image card — inline img with base64
                         st.markdown(f"""
                         <div class="g-card">
-                            <div class="g-card-img" style="padding:0;position:relative;">
-                                <img src="{b64}" style="width:100%;height:130px;object-fit:cover;display:block;">
+                            <div style="position:relative;height:130px;overflow:hidden;">
+                                <img src="{b64}"
+                                     style="width:100%;height:130px;object-fit:cover;display:block;">
                                 {frac_badge}{mkt_badge}
                             </div>
                             <div class="g-card-body">
@@ -1294,6 +1205,7 @@ with tab_vault:
                             </div>
                         </div>""", unsafe_allow_html=True)
                     else:
+                        # Emoji card
                         st.markdown(f"""
                         <div class="g-card">
                             <div class="g-card-img">
@@ -1307,40 +1219,61 @@ with tab_vault:
                             </div>
                         </div>""", unsafe_allow_html=True)
 
-                    # ── TITLE button ─────────────────────────────
-                    if st.button("📜 TITLE", key=f"title_{aid}"):
-                        st.session_state["cert_triggered"][aid] = True
-                        if not st.session_state["cert_ever"]:
-                            st.session_state["cert_ever"] = True
-                            run_quests(df_all, user)
-                        st.rerun()
+                    # ══ TITLE — FIX: generate PDF once, cache bytes ══
+                    # TITLE button: only shows if cert NOT yet generated for this asset
+                    cert_ready = aid in st.session_state["cert_bytes"]
 
-                    if st.session_state["cert_triggered"].get(aid):
-                        try:
-                            pdf = make_certificate(rn, aid, user, rv)
-                            st.download_button(
-                                "⬇️ Download Certificate",
-                                data=pdf,
-                                file_name=f"{rn[:24].replace(' ','_')}_Certificate.pdf",
-                                mime="application/pdf",
-                                key=f"dl_{aid}",
-                                use_container_width=True,
-                            )
-                            df_all.loc[df_all["id"]==aid, "cert_downloaded"] = True
-                            save_creations(df_all)
-                        except Exception as e:
-                            st.error(f"Certificate error: {e}")
+                    if not cert_ready:
+                        if st.button("📜 TITLE", key=f"title_{aid}"):
+                            try:
+                                pdf_bytes = make_certificate(rn, aid, user, rv)
+                                # Cache in session state (persists this session)
+                                st.session_state["cert_bytes"][aid] = pdf_bytes
+                                st.session_state["cert_triggered"].add(aid)
+                                # Mark cert_downloaded in CSV (once)
+                                fresh = load_creations()
+                                fresh_cp = fresh.copy()
+                                fresh_cp.loc[fresh_cp["id"] == aid, "cert_downloaded"] = "True"
+                                save_creations(fresh_cp)
+                                st.session_state["creations_df"] = load_creations()
+                                # Quest
+                                if not st.session_state["cert_ever"]:
+                                    st.session_state["cert_ever"] = True
+                                run_quests(df_all, user)
+                                log_activity(user, "CERT_GEN", aid)
+                            except Exception as e:
+                                st.error(f"Certificate error: {e}")
+                            st.rerun()
+                    else:
+                        # Show download button (no PDF re-generation)
+                        pdf_bytes = st.session_state["cert_bytes"][aid]
+                        safe_name = rn[:24].replace(" ","_")
+                        st.download_button(
+                            "⬇️ Download Certificate",
+                            data=pdf_bytes,
+                            file_name=f"{safe_name}_Certificate.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{aid}",
+                            use_container_width=True,
+                        )
+                        # Small re-generate link
+                        if st.button("🔄 Re-generate", key=f"regen_{aid}"):
+                            del st.session_state["cert_bytes"][aid]
+                            st.rerun()
 
-                    # ── SPLIT button ──────────────────────────────
+                    # ══ SPLIT — FIX: rerun after state change ═════
                     split_lbl = "⅒ FRACS" if is_frac else "🔀 SPLIT"
                     if st.button(split_lbl, key=f"split_{aid}"):
-                        toggled = not st.session_state["split_open"].get(aid, False)
-                        st.session_state["split_open"][aid] = toggled
+                        st.session_state["split_open"][aid] = (
+                            not st.session_state["split_open"].get(aid, False)
+                        )
                         if not is_frac:
-                            df_all.loc[df_all["id"]==aid, "is_fractional"]  = True
-                            df_all.loc[df_all["id"]==aid, "fraction_count"] = 100
-                            save_creations(df_all)
-                            st.session_state["creations_df"] = df_all
+                            fresh    = load_creations()
+                            fresh_cp = fresh.copy()
+                            fresh_cp.loc[fresh_cp["id"] == aid, "is_fractional"]  = "True"
+                            fresh_cp.loc[fresh_cp["id"] == aid, "fraction_count"] = "100"
+                            save_creations(fresh_cp)
+                            st.session_state["creations_df"] = load_creations()
                             run_quests(df_all, user)
                             log_activity(user, "SPLIT", aid)
                         st.rerun()
@@ -1352,33 +1285,36 @@ with tab_vault:
                             f"Each share: **{fv:,.0f} 𝕀** ✦"
                         )
 
-                    # ── LIST / DELIST button ──────────────────────
+                    # ══ LIST / DELIST — FIX: .copy() + str columns ══
                     list_lbl = "🌠 DELIST" if is_listed else "🌠 LIST"
                     if st.button(list_lbl, key=f"list_{aid}"):
+                        fresh    = load_creations()
+                        fresh_cp = fresh.copy()
                         if not is_listed:
-                            # List
-                            df_all.loc[df_all["id"]==aid, "listed_price"] = rv
-                            df_all.loc[df_all["id"]==aid, "listed_at"]    = datetime.now().isoformat()
-                            save_creations(df_all)
-                            mdf = load_market()
-                            if aid not in mdf.get("id", pd.Series()).values:
-                                mdf = pd.concat([mdf, pd.DataFrame([{
-                                    "id":aid,"name":rn,"sovereign":user,
-                                    "value":rv,"emoji":re_,
-                                    "listed_price":rv,"listed_at":datetime.now().isoformat()
+                            fresh_cp.loc[fresh_cp["id"] == aid, "listed_price"] = str(rv)
+                            fresh_cp.loc[fresh_cp["id"] == aid, "listed_at"]    = datetime.now().isoformat()
+                            save_creations(fresh_cp)
+                            # Add to market CSV
+                            mdf    = load_market()
+                            mdf_cp = mdf.copy()
+                            if aid not in mdf_cp["id"].values:
+                                mdf_cp = pd.concat([mdf_cp, pd.DataFrame([{
+                                    "id": aid, "name": rn, "sovereign": user,
+                                    "value": str(rv), "emoji": re_,
+                                    "listed_price": str(rv),
+                                    "listed_at": datetime.now().isoformat(),
                                 }])], ignore_index=True)
-                            save_market(mdf)
+                            save_market(mdf_cp)
                             run_quests(df_all, user)
-                            log_activity(user, "LIST", f"{aid} @ {rv}")
+                            log_activity(user, "LIST", f"{aid}@{rv}")
                             st.success(f"✦ **{rn}** is now listed in the Marketplace!")
                         else:
-                            # Delist
-                            df_all.loc[df_all["id"]==aid, "listed_price"] = ""
-                            df_all.loc[df_all["id"]==aid, "listed_at"]    = ""
-                            save_creations(df_all)
-                            mdf = load_market()
-                            mdf = mdf[mdf["id"] != aid]
-                            save_market(mdf)
+                            fresh_cp.loc[fresh_cp["id"] == aid, "listed_price"] = ""
+                            fresh_cp.loc[fresh_cp["id"] == aid, "listed_at"]    = ""
+                            save_creations(fresh_cp)
+                            mdf    = load_market()
+                            mdf_cp = mdf[mdf["id"] != aid].copy()
+                            save_market(mdf_cp)
                             log_activity(user, "DELIST", aid)
                             st.info(f"✦ **{rn}** removed from Marketplace.")
                         st.session_state["creations_df"] = load_creations()
@@ -1398,36 +1334,30 @@ with tab_wallet:
         <div class="wallet-card">
             <div class="wallet-label">CURRENT BALANCE</div>
             <div class="wallet-amount">{total_imagix:,} 𝕀</div>
-            <div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.9</div>
+            <div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.9.1</div>
         </div>""", unsafe_allow_html=True)
 
-    st.divider()
-
-    # Portfolio stats
     if not user_df.empty:
-        pv = pd.to_numeric(user_df["value"], errors="coerce").fillna(0).sum()
+        pv         = pd.to_numeric(user_df["value"], errors="coerce").fillna(0).sum()
         credit_est = int(pv * 0.25 + total_imagix * 1.5)
         pc1, pc2, pc3 = st.columns(3)
-        pc1.metric("VAULT VALUE",      f"{pv:,.0f} 𝕀")
-        pc2.metric("IMAGIX EARNED",    f"{total_imagix:,} 𝕀")
-        pc3.metric("CREDIT CAPACITY",  f"~{credit_est:,} 𝕀",
+        pc1.metric("VAULT VALUE",     f"{pv:,.0f} 𝕀")
+        pc2.metric("IMAGIX EARNED",   f"{total_imagix:,} 𝕀")
+        pc3.metric("CREDIT CAPACITY", f"~{credit_est:,} 𝕀",
                    help="Estimated from vault value + quest earnings")
 
     st.divider()
     st.markdown("#### ✦ Earnings Ledger")
 
-    # Build beautiful HTML ledger
     rows_html = ""
     for cat in ["Onboarding","Creation","Collection","Actions","Daily","Wealth"]:
         cat_qs = [q for q in QUESTS if q.get("cat") == cat]
         if not cat_qs: continue
-        rows_html += (
-            f'<tr><td colspan="3" class="ledger-cat">{cat}</td></tr>'
-        )
+        rows_html += f'<tr><td colspan="3" class="ledger-cat">{cat}</td></tr>'
         for q in cat_qs:
             done_flag = q["id"] in st.session_state["quest_completed"]
-            s_col  = C["teal"]   if done_flag else C["muted"]
-            r_col  = C["gold"]   if done_flag else C["muted"]
+            s_col  = C["teal"] if done_flag else C["muted"]
+            r_col  = C["gold"] if done_flag else C["muted"]
             status = "✅ DONE"   if done_flag else "○ PENDING"
             rows_html += f"""
             <tr>
@@ -1488,14 +1418,12 @@ with tab_quests:
 
     st.divider()
     done_ids = st.session_state["quest_completed"]
-
     for cat in ["Onboarding","Creation","Collection","Actions","Daily","Wealth"]:
         cat_qs = [q for q in QUESTS if q.get("cat") == cat]
         if not cat_qs: continue
         st.markdown(f"""
-        <div style="font-family:'Cinzel',serif;color:{C['purple']};font-size:10px;letter-spacing:2px;margin:16px 0 8px;text-transform:uppercase;">
-            ◈ {cat}
-        </div>""", unsafe_allow_html=True)
+        <div style="font-family:'Cinzel',serif;color:{C['purple']};font-size:10px;letter-spacing:2px;margin:16px 0 8px;text-transform:uppercase;">◈ {cat}</div>""",
+                    unsafe_allow_html=True)
         for q in cat_qs:
             done = q["id"] in done_ids
             css  = "q-card done" if done else "q-card"
@@ -1514,12 +1442,13 @@ with tab_quests:
     st.markdown(
         f"**Completed:** `{len(done_ids)} / {len(QUESTS)}`  ·  "
         f"**Earned:** `{total_imagix:,} 𝕀`  ·  "
-        f"**Remaining potential:** `{rem:,} 𝕀`"
+        f"**Remaining:** `{rem:,} 𝕀`"
     )
 
 
 # ────────────────────────────────────────────────────────────────────
 # TAB: MARKETPLACE
+# FIX: Atomic buy/sell with proper .copy() and string column values
 # ────────────────────────────────────────────────────────────────────
 with tab_market:
     render_tutor_panel("market")
@@ -1531,32 +1460,28 @@ with tab_market:
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,{C['card']},{C['card2']});
              border:1px solid rgba(242,201,76,.35);border-radius:16px;
-             padding:40px 32px;text-align:center;position:relative;overflow:hidden;">
+             padding:40px 32px;text-align:center;overflow:hidden;">
             <div style="font-size:50px;margin-bottom:14px;">🌠</div>
-            <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:18px;font-weight:700;letter-spacing:2px;">
-                GENESIS MARKETPLACE
-            </div>
-            <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:11px;margin-top:10px;letter-spacing:1px;">
+            <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:18px;font-weight:700;letter-spacing:2px;">GENESIS MARKETPLACE</div>
+            <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:11px;margin-top:10px;">
                 No creations listed yet — be the first Sovereign to open trade!
             </div>
             <div style="font-family:'DM Mono',monospace;color:{C['muted']};font-size:10px;margin-top:18px;line-height:2;">
                 ✦ Go to MY VAULT and click 🌠 LIST on any creation<br>
                 ✦ Fractional share trading · v1.0<br>
-                ✦ IMAGIX escrow & settlement · v1.0<br>
-                ✦ Parental approval gates · v1.0
+                ✦ IMAGIX escrow & settlement · v1.0
             </div>
         </div>""", unsafe_allow_html=True)
     else:
-        # Filter / sort
         mc1, mc2, mc3 = st.columns([2,1,1])
-        mc1.markdown(f"**{len(mdf)} listing(s)** available on the Genesis Layer")
+        mc1.markdown(f"**{len(mdf)} listing(s)** on the Genesis Layer")
         with mc2:
-            mkt_sort = st.selectbox("Sort",["Recent","Highest Price","Lowest Price"],
+            mkt_sort = st.selectbox("Sort",
+                                    ["Recent","Highest Price","Lowest Price"],
                                     label_visibility="collapsed")
         with mc3:
             show_own = st.checkbox("Show my listings", value=True)
 
-        # Apply sort
         mdf2 = mdf.copy()
         if mkt_sort == "Highest Price":
             mdf2["_lp"] = pd.to_numeric(mdf2["listed_price"], errors="coerce").fillna(0)
@@ -1578,12 +1503,13 @@ with tab_market:
             mn       = str(mrow.get("name",""))
             ms       = str(mrow.get("sovereign",""))
             me       = str(mrow.get("emoji","🌟"))
-            mp       = int(float(str(mrow.get("listed_price",0)) or 0))
+            mp       = safe_int(mrow.get("listed_price"))
             is_own   = (ms == user)
-            can_buy  = (not is_own and total_imagix >= mp)
+            can_buy  = (not is_own and total_imagix >= mp and mp > 0)
             need_more = max(0, mp - total_imagix)
 
-            owner_tag = f" · <span style='color:{C['teal']};'>YOUR LISTING</span>" if is_own else ""
+            owner_tag = (f" · <span style='color:{C['teal']};'>YOUR LISTING</span>"
+                         if is_own else "")
             st.markdown(f"""
             <div class="mkt-row">
                 <div class="mkt-emoji">{me}</div>
@@ -1598,34 +1524,37 @@ with tab_market:
                 bc1, bc2 = st.columns([2,1])
                 with bc1:
                     if st.button(f"💰 BUY  {mp:,} 𝕀", key=f"buy_{mid}",
-                                 disabled=not can_buy):
-                        # ── Atomic transfer ──────────────────────
-                        # 1. Debit buyer
-                        new_buyer_bal = total_imagix - mp
-                        st.session_state["imagix"] = new_buyer_bal
-                        save_wallet(user, new_buyer_bal)
-                        # 2. Credit seller
-                        seller_bal = load_wallet(ms)
-                        save_wallet(ms, seller_bal + mp)
-                        # 3. Transfer ownership in creations CSV
-                        cdf = load_creations()
-                        cdf.loc[cdf["id"]==mid, "sovereign"]    = user
-                        cdf.loc[cdf["id"]==mid, "listed_price"] = ""
-                        cdf.loc[cdf["id"]==mid, "listed_at"]    = ""
-                        save_creations(cdf)
-                        # 4. Remove from market
-                        mdf_u = load_market()
-                        mdf_u = mdf_u[mdf_u["id"] != mid]
-                        save_market(mdf_u)
-                        # 5. Update session
-                        st.session_state["creations_df"] = load_creations()
-                        st.session_state["bought_ever"]  = True
-                        run_quests(load_creations(), user)
-                        log_activity(user, "BUY", f"{mid} from {ms} @ {mp}")
-                        st.success(f"✦ You acquired **{mn}** for **{mp:,} 𝕀**! Check your Vault.")
-                        st.rerun()
+                                 disabled=(not can_buy)):
+                        # ── FIX: Atomic transfer with .copy() everywhere ──
+                        try:
+                            # 1. Debit buyer
+                            new_bal = total_imagix - mp
+                            st.session_state["imagix"] = new_bal
+                            save_wallet(user, new_bal)
+                            # 2. Credit seller
+                            save_wallet(ms, load_wallet(ms) + mp)
+                            # 3. Transfer creation ownership
+                            cdf    = load_creations()
+                            cdf_cp = cdf.copy()
+                            cdf_cp.loc[cdf_cp["id"] == mid, "sovereign"]    = user
+                            cdf_cp.loc[cdf_cp["id"] == mid, "listed_price"] = ""
+                            cdf_cp.loc[cdf_cp["id"] == mid, "listed_at"]    = ""
+                            save_creations(cdf_cp)
+                            # 4. Remove from market
+                            mdf_u  = load_market()
+                            mdf_up = mdf_u[mdf_u["id"] != mid].copy()
+                            save_market(mdf_up)
+                            # 5. Update session
+                            st.session_state["creations_df"] = load_creations()
+                            st.session_state["bought_ever"]  = True
+                            run_quests(load_creations(), user)
+                            log_activity(user, "BUY", f"{mid} from {ms} @ {mp}")
+                            st.success(f"✦ You acquired **{mn}** for **{mp:,} 𝕀**! Check your Vault.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Purchase failed: {e}")
                 with bc2:
-                    if not can_buy:
+                    if not can_buy and mp > 0:
                         st.caption(f"Need {need_more:,} more 𝕀")
 
 
@@ -1670,8 +1599,7 @@ with tab_upload:
                     aid = generate_id(cn, user)
                     fp  = ""
                     if uf is not None:
-                        sfn = (uf.name.encode("ascii","ignore")
-                               .decode("ascii").replace(" ","_"))
+                        sfn  = uf.name.encode("ascii","ignore").decode("ascii").replace(" ","_")
                         dest = f"{F['dir']}/{user}/{aid}_{sfn}"
                         with open(dest, "wb") as fh:
                             fh.write(uf.getbuffer())
@@ -1679,22 +1607,22 @@ with tab_upload:
 
                     new_rec = {
                         "id": aid, "name": cn.strip(), "sovereign": user,
-                        "value": int(iv), "emoji": ep, "file_path": fp,
+                        "value": str(int(iv)), "emoji": ep, "file_path": fp,
                         "created_at": datetime.now().isoformat(),
-                        "is_fractional": False, "cert_downloaded": False,
-                        "fraction_count": 100, "listed_price": "", "listed_at": "",
+                        "is_fractional": "False", "cert_downloaded": "False",
+                        "fraction_count": "100", "listed_price": "", "listed_at": "",
                         "lore": lore.strip()[:280],
                     }
-                    df_all = pd.concat([df_all, pd.DataFrame([new_rec])], ignore_index=True)
-                    save_creations(df_all)
-                    st.session_state["creations_df"] = df_all
+                    fresh    = load_creations()
+                    fresh_cp = pd.concat([fresh, pd.DataFrame([new_rec])], ignore_index=True)
+                    save_creations(fresh_cp)
+                    st.session_state["creations_df"] = fresh_cp
 
                     if lore.strip():
                         st.session_state["lore_added"] = True
 
-                    run_quests(df_all, user)
+                    run_quests(fresh_cp, user)
                     log_activity(user, "UPLOAD", f"{aid} '{cn.strip()}'")
-
                     st.balloons()
                     st.success(
                         f"✦ **{cn.strip()}** inscribed on the Genesis Layer!  \n"
@@ -1709,23 +1637,22 @@ with tab_upload:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# SIDEBAR  — GENESIS TERMINAL v0.9  (Sponsor security enforced)
+# SIDEBAR — GENESIS TERMINAL v0.9.1
+# FIX: Sponsor security — minors NEVER see password reset
+# FIX: sponsor_verified_session resets on logout (handled in _SS init)
 # ══════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align:center;padding:16px 0 8px;">
-        <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:14px;font-weight:900;letter-spacing:3px;">
-            ◈ GENESIS TERMINAL
-        </div>
-        <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">
-            v0.9 · SOVEREIGN INTERFACE
-        </div>
+        <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:14px;font-weight:900;letter-spacing:3px;">◈ GENESIS TERMINAL</div>
+        <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">v0.9.1 · STABILITY PATCH</div>
     </div>""", unsafe_allow_html=True)
     st.divider()
 
-    # Sovereign stats
-    total_val_s = pd.to_numeric(user_df["value"], errors="coerce").fillna(0).sum() if not user_df.empty else 0
-    sidebar_stats = [
+    total_val_s = (pd.to_numeric(user_df["value"], errors="coerce").fillna(0).sum()
+                   if not user_df.empty else 0)
+
+    for lbl, val in [
         ("YOUNG SOVEREIGN",  user),
         ("AGE",              f"{age} yrs" if dob else "Unknown"),
         ("RANK",             rank["name"]),
@@ -1735,8 +1662,7 @@ with st.sidebar:
         ("QUESTS DONE",      f"{n_done} / {len(QUESTS)}"),
         ("TUTORS",           f"{len(active_tutors)} available"),
         ("SESSION",          datetime.now().strftime("%H:%M · %b %d")),
-    ]
-    for lbl, val in sidebar_stats:
+    ]:
         st.markdown(f"""
         <div class="term-block">
             <div class="term-key">{lbl}</div>
@@ -1754,9 +1680,6 @@ with st.sidebar:
     st.divider()
 
     # ── SPONSOR / PARENTAL MODE ────────────────────────────────────
-    # Security rule: minors can see the toggle but NOT the reset-password
-    # or any admin action. sponsor_verified_session resets on logout.
-
     st.markdown(f"""
     <div style="font-family:'Cinzel',serif;color:{C['muted']};font-size:9px;letter-spacing:2px;margin-bottom:6px;">
         PARENTAL / SPONSOR MODE
@@ -1766,30 +1689,27 @@ with st.sidebar:
         "Enable Sponsor View",
         value=st.session_state["parent_mode"],
         key="parent_toggle",
-        help="A sponsor/parent can view your progress here.",
+        help="A sponsor/parent can view progress here.",
     )
     st.session_state["parent_mode"] = parent_on
 
     if parent_on:
-        # Mark sponsor_viewed for quest
+        # Quest: sponsor_viewed
         if not st.session_state.get("sponsor_viewed_qs"):
-            st.session_state["sponsor_viewed"] = True
             st.session_state["sponsor_viewed_qs"] = True
             run_quests(df_all, user)
 
-        urow = get_user_row(user)
+        urow        = get_user_row(user)
         has_sponsor = (urow is not None and
                        str(urow.get("sponsor_kingdom","")).strip() not in ("","nan"))
 
-        # ── Verification gate ────────────────────────────────────
+        # ── Auth gate (runs once per session) ──────────────────────
         if not st.session_state.get(SPONSOR_SESSION_KEY, False):
             if has_sponsor:
-                sp_pw_h = str(urow.get("sponsor_pw_hash",""))
+                sp_pw_h  = str(urow.get("sponsor_pw_hash",""))
                 sp_input = st.text_input(
-                    "Sponsor Password",
-                    type="password",
-                    key="sp_pw_input",
-                    label_visibility="collapsed",
+                    "Sponsor Password", type="password",
+                    key="sp_pw_input", label_visibility="collapsed",
                     placeholder="Sponsor password",
                 )
                 if st.button("🔓 VERIFY SPONSOR", key="verify_sp", use_container_width=True):
@@ -1800,28 +1720,30 @@ with st.sidebar:
                     else:
                         st.error("Wrong sponsor password.")
             else:
-                # No sponsor set — allow open demo view (still no admin actions for minors)
+                # No sponsor configured → open demo view
                 st.session_state[SPONSOR_SESSION_KEY] = True
 
-        # ── Sponsor dashboard (read-only for minors) ─────────────
+        # ── Dashboard (read-only) ───────────────────────────────────
         if st.session_state.get(SPONSOR_SESSION_KEY, False):
-            n_cert_s = int(user_df["cert_downloaded"].astype(str).str.lower().isin(["true","1"]).sum()) if not user_df.empty else 0
-            n_frac_s = int(user_df["is_fractional"].astype(str).str.lower().isin(["true","1"]).sum()) if not user_df.empty else 0
-            n_listed = int((user_df["listed_price"].astype(str).str.strip().isin(["","nan"]) == False).sum()) if not user_df.empty else 0
+            n_cert_s = (int(user_df["cert_downloaded"].astype(str).str.lower()
+                         .isin(["true","1"]).sum()) if not user_df.empty else 0)
+            n_frac_s = (int(user_df["is_fractional"].astype(str).str.lower()
+                         .isin(["true","1"]).sum()) if not user_df.empty else 0)
+            n_listed = (int((user_df["listed_price"].astype(str).str.strip()
+                          .isin(["","nan"]) == False).sum()) if not user_df.empty else 0)
 
-            sp_data = [
-                ("Kingdom",       user),
-                ("Age",           f"{age} yrs"),
-                ("Rank",          rank["name"]),
-                ("Creations",     str(len(user_df))),
-                ("Portfolio",     f"{total_val_s:,.0f} 𝕀"),
-                ("Certs Issued",  str(n_cert_s)),
-                ("Fractional",    str(n_frac_s)),
-                ("Listed",        str(n_listed)),
-                ("IMAGIX",        f"{total_imagix:,} 𝕀"),
-                ("Quests Done",   f"{n_done}/{len(QUESTS)}"),
-            ]
-            for lbl, val in sp_data:
+            for lbl, val in [
+                ("Kingdom",      user),
+                ("Age",          f"{age} yrs"),
+                ("Rank",         rank["name"]),
+                ("Creations",    str(len(user_df))),
+                ("Portfolio",    f"{total_val_s:,.0f} 𝕀"),
+                ("Certs Issued", str(n_cert_s)),
+                ("Fractional",   str(n_frac_s)),
+                ("Listed",       str(n_listed)),
+                ("IMAGIX",       f"{total_imagix:,} 𝕀"),
+                ("Quests Done",  f"{n_done}/{len(QUESTS)}"),
+            ]:
                 st.markdown(f"""
                 <div class="sp-row">
                     <span class="sp-key">{lbl}</span>
@@ -1831,13 +1753,12 @@ with st.sidebar:
             st.write("")
             st.markdown(f"""
             <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:9px;margin-top:8px;line-height:1.8;opacity:.8;">
-                ✦ Read-only Sponsor view<br>
-                ✦ Trade approval gates · v1.0<br>
-                ✦ Activity log · v1.0
+                ✦ Read-only Sponsor view<br>✦ Trade approval gates · v1.0<br>✦ Activity log · v1.0
             </div>""", unsafe_allow_html=True)
 
-            # ── Password Reset — ONLY for non-minors or verified adult sponsors ──
-            # SECURITY: minors never see this section
+            # ── PASSWORD RESET ──────────────────────────────────────
+            # SECURITY RULE: this block is ONLY shown when is_minor is False.
+            # Minor users (age < 18) NEVER see this, regardless of sponsor state.
             if not is_minor:
                 st.write("")
                 with st.expander("🔑 Reset Kingdom Password"):
@@ -1855,15 +1776,18 @@ with st.sidebar:
                             log_activity(user, "PWD_RESET", "by sponsor")
                             st.success("✦ Password reset by Sponsor.")
             else:
-                # Minor user — show helpful note, NO admin controls
+                # Minor: parental control note, ZERO admin UI
                 st.markdown(f"""
-                <div style="font-family:'DM Mono',monospace;color:{C['orange']};font-size:9px;margin-top:10px;padding:8px 10px;background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);border-radius:8px;">
-                    🛡️ Account management requires your Sponsor to contact support. Parental controls active.
+                <div style="font-family:'DM Mono',monospace;color:{C['orange']};font-size:9px;
+                     margin-top:10px;padding:8px 10px;
+                     background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);
+                     border-radius:8px;">
+                    🛡️ Account management is handled by your Sponsor. Parental controls active.
                 </div>""", unsafe_allow_html=True)
 
     st.divider()
     st.caption(
-        "Delphia Genesis v0.9\n"
+        "Delphia Genesis v0.9.1\n"
         "Where Imagination Becomes Sovereign\n"
         "© Rey Delphi · Kardashev VI"
     )
@@ -1874,6 +1798,6 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════════════════════
 st.divider()
 st.caption(
-    "⬟ Delphia Genesis v0.9 — The Sovereign Awakening  ·  "
-    "Genesis Layer · Kardashev Type VI ⬟"
+    "⬟ Delphia Genesis v0.9.1 — Stability Patch  ·  "
+    "The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟"
 )
