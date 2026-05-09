@@ -1,10 +1,10 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║      DELPHIA GENESIS v0.10.1 — CREATOR ECONOMY STABILIZATION       ║
+║      DELPHIA GENESIS v0.10.1.2 — QUICK HOTFIX       ║
 ║                                                                      ║
-║  Fixes: execute_sale logging · royalties panel · quest activation   ║
-║         TITLE flash final · royalty_ever tracking · wallet sync     ║
-║         Marketplace royalty UX preview                              ║
+║  Fixes: SOLD log for seller · royalty_ever detection (wallet+creations)║
+║         Quest "Royalty Sovereign" activation hardened               ║
+║         ACT_META: SOLD action added                              ║
 ║                   Rey Delphi · Kardashev VI                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
@@ -96,6 +96,7 @@ ACT_META = {
     "LIST":        ("🌠", "purple", "Listed"),
     "DELIST":      ("✕",  "muted",  "Delisted"),
     "BUY":         ("💰", "green",  "Purchased"),
+    "SOLD":        ("🤝", "teal",   "Sale Made"),
     "ROYALTY":     ("👑", "gold",   "Royalty Earned"),
     "QUESTS_DONE": ("⚡", "gold",   "Quest Done"),
     "LOGIN":       ("🔑", "teal",   "Login"),
@@ -782,12 +783,17 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
         result["seller_received"] = seller_receives
         result["message"]         = "Sale completed."
 
-        # ── Activity log: BUY (buyer) + ROYALTY (creator) ───────
-        # Both logged unconditionally after all writes succeed
+        # ── Activity log: BUY (buyer) + SOLD (seller) + ROYALTY (creator) ──
+        # All three logged unconditionally after all writes succeed
         log_activity(
             buyer, "BUY",
             "{} from {} @ {:,} [{}]".format(asset_id, seller, price, transaction_type),
         )
+        log_activity(
+            seller, "SOLD",
+            "{} to {} @ {:,} [{}]".format(asset_id, buyer, price, transaction_type),
+        )
+        result["seller"] = seller
         if result["royalty_amount"] > 0:
             log_activity(
                 result["royalty_to"], "ROYALTY",
@@ -1131,7 +1137,7 @@ if not st.session_state["authenticated"]:
     st.markdown(
         '<div class="g-hero" style="margin-top:40px;padding:48px 40px;">'
         '<div class="g-hero-title">&#11039; DELPHIA GENESIS &#11039;</div>'
-        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10.1</div>'
+        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10.1.2</div>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1241,16 +1247,33 @@ total_royalties = load_wallet_royalties(user)
 rank           = get_rank(total_imagix)
 n_done         = len(st.session_state["quest_completed"])
 
-# v0.10.1 FIX: Check royalties from disk on every page load
-# This catches royalties earned passively (another user bought your creation)
+# v0.10.1.2 FIX: Robust royalty_ever detection on every page load.
+# Checks BOTH wallet total AND any creation with total_royalties > 0.
+# Triggers run_quests immediately if newly detected.
 _disk_royalties = load_wallet_royalties(user)
-if _disk_royalties > 0 and not st.session_state.get("royalty_ever"):
-    st.session_state["royalty_ever"] = True
-# Sync in-session total_royalties with disk value (passive income)
-total_royalties = _disk_royalties  # override with fresh disk value
-if total_royalties > 0 and not st.session_state.get("royalty_ever"):
-    st.session_state["royalty_ever"] = True
-    run_quests(df_all, user)
+total_royalties = _disk_royalties  # always fresh from disk
+
+def _check_royalty_ever_from_disk(u: str) -> bool:
+    """Returns True if user has ever received a royalty — wallet OR creation record."""
+    if load_wallet_royalties(u) > 0:
+        return True
+    try:
+        cdf_r = load_creations()
+        if cdf_r.empty or "original_creator" not in cdf_r.columns:
+            return False
+        user_creates = cdf_r[cdf_r["original_creator"] == u]
+        if user_creates.empty:
+            return False
+        return bool(
+            pd.to_numeric(user_creates["total_royalties"], errors="coerce").fillna(0).gt(0).any()
+        )
+    except Exception:
+        return False
+
+if not st.session_state.get("royalty_ever"):
+    if _check_royalty_ever_from_disk(user):
+        st.session_state["royalty_ever"] = True
+        run_quests(df_all, user)
 
 
 # ── HEADER ─────────────────────────────────────────────────────────
@@ -1637,7 +1660,7 @@ with tab_wallet:
             '<div class="wallet-card">'
             '<div class="wallet-label">CURRENT BALANCE</div>'
             '<div class="wallet-amount">{:,} I</div>'
-            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10.1</div>'
+            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10.1.2</div>'
             '</div>'.format(total_imagix),
             unsafe_allow_html=True,
         )
@@ -2101,7 +2124,7 @@ with st.sidebar:
         '<div style="text-align:center;padding:16px 0 8px;">'
         '<div style="font-family:Cinzel,serif;color:#F2C94C;font-size:14px;font-weight:900;letter-spacing:3px;">◈ GENESIS TERMINAL</div>'
         '<div style="font-family:DM Mono,monospace;color:#00E5C0;font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">'
-        'v0.10.1 · CREATOR ECONOMY STABILIZATION</div></div>',
+        'v0.10.1.2 · QUICK HOTFIX</div></div>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -2230,4 +2253,4 @@ with st.sidebar:
 # FOOTER
 # ══════════════════════════════════════════════════════════════════════
 st.divider()
-st.caption("⬟ Delphia Genesis v0.10.1 — Creator Economy Stabilization  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
+st.caption("⬟ Delphia Genesis v0.10.1.2 — Quick Hotfix  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
