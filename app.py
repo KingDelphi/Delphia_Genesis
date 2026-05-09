@@ -1,8 +1,10 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║      DELPHIA GENESIS v0.9.2.1 — CLARITY & CONTROL · MICRO PATCH    ║
+║      DELPHIA GENESIS v0.9.2 — CLARITY & CONTROL                     ║
 ║                                                                      ║
-║  Fixes: TITLE flash (no finally rerun) · Quest Banner HTML clean     ║
+║  Fixes: TITLE flash · Activity Ledger · Quest notifications          ║
+║         Buy feedback · Card HTML · Progress bar stability            ║
+║                   Rey Delphi · Kardashev VI                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
 
@@ -101,7 +103,7 @@ ACT_META = {
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ② TUTORS v2
+# ② TUTORS v2 (unchanged from v0.9.1)
 # ══════════════════════════════════════════════════════════════════════
 TUTORS = [
     {
@@ -266,7 +268,7 @@ QUESTS = [
     {"id":"q_born",    "title":"Sovereign Born",      "desc":"Enter the Genesis Layer for the first time.",       "reward":1_000,  "icon":"🌅","cat":"Onboarding", "check": lambda df,u,ss: True},
     {"id":"q_first",   "title":"First Genesis",       "desc":"Register your very first creation.",                "reward":5_000,  "icon":"🌱","cat":"Onboarding", "check": lambda df,u,ss: _q_count(df,u)>=1},
     {"id":"q_img",     "title":"Visual Sovereign",    "desc":"Upload a creation with an image file.",             "reward":4_000,  "icon":"🖼️","cat":"Creation",   "check": lambda df,u,ss: _q_has_img(df,u)},
-    {"id":"q_million", "title":"Million Imaginer",    "desc":"Register a creation worth >= 1,000,000 IMAGIX.",    "reward":25_000, "icon":"💎","cat":"Creation",   "check": lambda df,u,ss: _q_max_val(df,u)>=1_000_000},
+    {"id":"q_million", "title":"Million Imaginer",    "desc":"Register a creation worth ≥ 1,000,000 IMAGIX.",     "reward":25_000, "icon":"💎","cat":"Creation",   "check": lambda df,u,ss: _q_max_val(df,u)>=1_000_000},
     {"id":"q_lore",    "title":"Lorekeeper",          "desc":"Add a lore description to a creation.",            "reward":2_000,  "icon":"📖","cat":"Creation",   "check": lambda df,u,ss: ss.get("lore_added",False)},
     {"id":"q_three",   "title":"Trilogy of Wonders",  "desc":"Bring 3 creations to the Genesis Layer.",          "reward":12_000, "icon":"🎨","cat":"Collection", "check": lambda df,u,ss: _q_count(df,u)>=3},
     {"id":"q_five",    "title":"Hand of Wonders",     "desc":"Amass 5 creations.",                               "reward":18_000, "icon":"🖐","cat":"Collection", "check": lambda df,u,ss: _q_count(df,u)>=5},
@@ -351,7 +353,7 @@ def inject_theme():
     [data-testid="stSidebar"]{{background:linear-gradient(180deg,#080f1e 0%,#0a1628 60%,{C['space']} 100%);border-right:1px solid rgba(157,78,221,.4);}}
     [data-testid="stSidebar"] section{{padding-top:0;}}
 
-    /* ── Progress bar ── */
+    /* ── Progress bar — FIX: no animation to avoid visual glitches ── */
     .stProgress>div>div>div>div{{
         background:linear-gradient(90deg,#9D4EDD 0%,#4facfe 25%,#00E5C0 50%,#43e97b 75%,#F2C94C 100%);
         border-radius:4px;
@@ -440,14 +442,12 @@ def inject_theme():
     .buy-detail-val{{font-family:'Cinzel',serif;color:{C['green']};font-size:10px;font-weight:700;}}
 
     /* ── Quest completion banner ── */
-    .quest-banner{{background:linear-gradient(135deg,rgba(242,201,76,.1),rgba(157,78,221,.08));border:1px solid rgba(242,201,76,.4);border-radius:14px;padding:16px 20px;margin-bottom:16px;}}
-    .quest-banner-header{{font-family:'Cinzel',serif;color:{C['gold']};font-size:13px;font-weight:700;margin-bottom:10px;}}
-    .quest-banner-total{{color:{C['teal']};}}
-    .quest-row{{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(242,201,76,.08);}}
-    .quest-row:last-child{{border-bottom:none;}}
-    .quest-row-icon{{font-size:16px;min-width:22px;}}
-    .quest-row-name{{font-family:'DM Mono',monospace;color:#ccd6f0;font-size:11px;flex:1;}}
-    .quest-row-reward{{font-family:'Cinzel',serif;color:{C['teal']};font-size:11px;font-weight:700;white-space:nowrap;}}
+    .quest-banner{{background:linear-gradient(135deg,rgba(242,201,76,.1),rgba(157,78,221,.08));border:1px solid rgba(242,201,76,.4);border-radius:14px;padding:16px 20px;margin-bottom:16px;position:relative;}}
+    .quest-banner-title{{font-family:'Cinzel',serif;color:var(--gold);font-size:13px;font-weight:700;margin-bottom:10px;}}
+    .quest-item{{display:flex;align-items:center;gap:10px;padding:4px 0;}}
+    .quest-item-icon{{font-size:16px;}}
+    .quest-item-name{{font-family:'DM Mono',monospace;color:#ccd6f0;font-size:11px;flex:1;}}
+    .quest-item-reward{{font-family:'Cinzel',serif;color:var(--teal);font-size:11px;font-weight:700;}}
 
     /* ── Activity Log ── */
     .act-item{{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(157,78,221,.15);transition:background .15s;}}
@@ -564,7 +564,7 @@ def log_activity(sovereign: str, action: str, detail: str = ""):
     df  = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
     _write(df.tail(500), F["activity"])
 
-def load_activity(user: str, n: int = 20) -> list:
+def load_activity(user: str, n: int = 20) -> list[dict]:
     """Load last N activity events for a user, newest first."""
     df = _read(F["activity"], ACTIVITY_COLS)
     if df.empty: return []
@@ -651,6 +651,12 @@ def get_rank(imagix: int) -> dict:
 # ⑧ QUEST ENGINE — idempotent, banner-based notifications
 # ══════════════════════════════════════════════════════════════════════
 def run_quests(df: pd.DataFrame, user: str) -> int:
+    """
+    Evaluate all quests. Award new completions.
+    v0.9.2 FIX: Stores newly completed quests in session_state["quest_banner"]
+    for consolidated display instead of multiple toasts.
+    Returns IMAGIX delta.
+    """
     ss_extra = {
         "imagix":      st.session_state.get("imagix",0),
         "cert_ever":   st.session_state.get("cert_ever",False),
@@ -679,6 +685,7 @@ def run_quests(df: pd.DataFrame, user: str) -> int:
         st.session_state["quest_completed"] = done
         save_quests_done(user, done)
         save_wallet(user, st.session_state["imagix"])
+        # v0.9.2: Accumulate into banner list (persistent until dismissed)
         existing = st.session_state.get("quest_banner", [])
         st.session_state["quest_banner"] = existing + newly
         log_activity(user, "QUESTS_DONE", str([q["id"] for q in newly]))
@@ -687,49 +694,36 @@ def run_quests(df: pd.DataFrame, user: str) -> int:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑨ QUEST BANNER — v0.9.2.1 FIX: clean HTML, no raw-tag bleed
+# ⑨ QUEST BANNER — persistent, consolidated, dismissable
 # ══════════════════════════════════════════════════════════════════════
 def render_quest_banner():
     """
-    v0.9.2.1 FIX: Renders quest completion banner using st.container()
-    with separate st.markdown calls — avoids HTML parse issues that caused
-    raw tag display in v0.9.2.
+    v0.9.2: Shows a consolidated banner for all newly earned quests.
+    Stays visible until user clicks dismiss. Replaces flashing toasts.
     """
     banner_quests = st.session_state.get("quest_banner", [])
     if not banner_quests:
         return
 
     total_reward = sum(q["reward"] for q in banner_quests)
-    count        = len(banner_quests)
-    header_text  = "Quest Completed!" if count == 1 else f"{count} Quests Completed!"
-
-    # Build quest rows HTML safely — plain ASCII tags, no nested f-strings
-    rows_parts = []
+    items_html   = ""
     for q in banner_quests:
-        icon   = q.get("icon", "⚡")
-        title  = q.get("title", "")
-        reward = q.get("reward", 0)
-        rows_parts.append(
-            '<div class="quest-row">'
-            f'<span class="quest-row-icon">{icon}</span>'
-            f'<span class="quest-row-name">{title}</span>'
-            f'<span class="quest-row-reward">+{reward:,} &#120128;</span>'
-            '</div>'
-        )
-    rows_html = "\n".join(rows_parts)
+        items_html += f"""
+        <div class="quest-item">
+            <div class="quest-item-icon">{q['icon']}</div>
+            <div class="quest-item-name">{q['title']}</div>
+            <div class="quest-item-reward">+{q['reward']:,} 𝕀</div>
+        </div>"""
 
-    banner_html = (
-        '<div class="quest-banner">'
-        '<div class="quest-banner-header">'
-        '&#9889; ' + header_text
-        '&nbsp;&middot;&nbsp;'
-        f'<span class="quest-banner-total">+{total_reward:,} IMAGIX earned</span>'
-        '</div>'
-        f'{rows_html}'
-        '</div>'
-    )
-
-    st.markdown(banner_html, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="quest-banner">
+        <div class="quest-banner-title">
+            ⚡ {'Quest Completed!' if len(banner_quests)==1 else f'{len(banner_quests)} Quests Completed!'}
+            &nbsp;·&nbsp;
+            <span style="color:{C['teal']};">+{total_reward:,} IMAGIX earned</span>
+        </div>
+        {items_html}
+    </div>""", unsafe_allow_html=True)
 
     if st.button("✕ Dismiss", key="dismiss_banner"):
         st.session_state["quest_banner"] = []
@@ -828,7 +822,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold",26)
     c.drawCentredString(W/2,H-64,"DELPHIA GENESIS")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica",9.5)
-    c.drawCentredString(W/2,H-88,"✦  CERTIFICATE OF IMAGINATION  ·  GENESIS LAYER v0.9.2.1  ✦")
+    c.drawCentredString(W/2,H-88,"✦  CERTIFICATE OF IMAGINATION  ·  GENESIS LAYER v0.9.2  ✦")
 
     star_cy = H-192
     def draw_star(cx,cy,ro,ri,pts=5):
@@ -887,7 +881,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold",11)
     c.drawCentredString(W/2,sig_y,"REY DELPHI  ·  REINO DE DELPHIA  ·  KARDASHEV VI")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica",7)
-    c.drawCentredString(W/2,28,"Delphia Genesis v0.9.2.1  ·  Where Imagination Becomes Sovereign  ·  delphia.genesis")
+    c.drawCentredString(W/2,28,"Delphia Genesis v0.9.2  ·  Where Imagination Becomes Sovereign  ·  delphia.genesis")
     c.save()
     return buf.getvalue()
 
@@ -898,6 +892,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
 _SS = {
     "authenticated":False,"user":"","imagix":0,
     "quest_completed":set(),"creations_df":None,
+    # v0.9.2: cert_bytes keyed by asset_id — no flash
     "cert_bytes":{},
     "cert_ever":False,
     "split_open":{},
@@ -905,7 +900,9 @@ _SS = {
     "lore_added":False,"sold_ever":False,"bought_ever":False,"has_sponsor":False,
     SPONSOR_SESSION_KEY:False,
     "parent_mode":False,"sponsor_viewed_qs":False,"deep_q_open":None,
+    # v0.9.2: consolidated quest notifications
     "quest_banner":[],
+    # v0.9.2: buy feedback panel
     "buy_feedback":None,
 }
 for k,v in _SS.items():
@@ -919,7 +916,7 @@ if not st.session_state["authenticated"]:
     st.markdown("""
     <div class="g-hero" style="margin-top:40px;padding:48px 40px;">
         <div class="g-hero-title">⬟ DELPHIA GENESIS ⬟</div>
-        <div class="g-hero-sub">CLARITY & CONTROL · GENESIS LAYER v0.9.2.1</div>
+        <div class="g-hero-sub">CLARITY & CONTROL · GENESIS LAYER v0.9.2</div>
     </div>""", unsafe_allow_html=True)
 
     _, mid, _ = st.columns([1,1.6,1])
@@ -1131,7 +1128,7 @@ def render_tutor_panel(context_tab: str):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# TABS
+# TABS  (v0.9.2: added 📜 ACTIVITY)
 # ══════════════════════════════════════════════════════════════════════
 tab_vault,tab_wallet,tab_quests,tab_market,tab_upload,tab_activity = st.tabs([
     "🌌 MY VAULT","💎 WALLET","⚔️ QUESTS","🌠 MARKETPLACE","🌱 UPLOAD","📜 ACTIVITY",
@@ -1140,7 +1137,7 @@ tab_vault,tab_wallet,tab_quests,tab_market,tab_upload,tab_activity = st.tabs([
 
 # ────────────────────────────────────────────────────────────────────
 # TAB: VAULT
-# v0.9.2.1 FIX: TITLE button — store cert THEN rerun (no finally), no flash
+# v0.9.2 FIX: TITLE button — no flash, generate on click with finally:rerun
 # ────────────────────────────────────────────────────────────────────
 with tab_vault:
     render_tutor_panel("vault")
@@ -1197,6 +1194,7 @@ with tab_vault:
             cols = st.columns(CPR)
             for ci,rec in enumerate(records[rs:rs+CPR]):
                 with cols[ci]:
+                    # ── Safe field extraction ─────────────────────
                     aid      = str(rec.get("id") or "")
                     rn       = str(rec.get("name") or "Unknown")
                     rv       = safe_int(rec.get("value"))
@@ -1207,8 +1205,10 @@ with tab_vault:
                     lp_raw   = str(rec.get("listed_price","")).strip()
                     is_listed= lp_raw not in ("","nan","0","None")
 
-                    frac_badge  = '<div class="g-badge-teal">&#8530; FRACTIONAL</div>' if is_frac   else ""
-                    mkt_badge   = '<div class="g-badge-purple">&#127776; LISTED</div>'  if is_listed else ""
+                    # ── Badges — always strings, never None ────────
+                    frac_badge  = '<div class="g-badge-teal">⅒ FRACTIONAL</div>' if is_frac   else ""
+                    mkt_badge   = '<div class="g-badge-purple">🌠 LISTED</div>'   if is_listed else ""
+                    cert_badge  = '<div class="g-cert-ready">📜 CERT READY</div>' if (aid in st.session_state["cert_bytes"]) else ""
 
                     b64 = img_to_b64(rfp)
 
@@ -1217,11 +1217,11 @@ with tab_vault:
                         <div class="g-card">
                             <div style="position:relative;height:130px;overflow:hidden;">
                                 <img src="{b64}" style="width:100%;height:130px;object-fit:cover;display:block;">
-                                {frac_badge}{mkt_badge}
+                                {frac_badge}{mkt_badge}{cert_badge}
                             </div>
                             <div class="g-card-body">
                                 <div class="g-card-title">{rn}</div>
-                                <div class="g-card-value">{rv:,} &#120128;</div>
+                                <div class="g-card-value">{rv:,} 𝕀</div>
                                 <div class="g-card-id">{aid}</div>
                             </div>
                         </div>""", unsafe_allow_html=True)
@@ -1230,42 +1230,44 @@ with tab_vault:
                         <div class="g-card">
                             <div class="g-card-img">
                                 <span style="position:relative;z-index:1;">{re_}</span>
-                                {frac_badge}{mkt_badge}
+                                {frac_badge}{mkt_badge}{cert_badge}
                             </div>
                             <div class="g-card-body">
                                 <div class="g-card-title">{rn}</div>
-                                <div class="g-card-value">{rv:,} &#120128;</div>
+                                <div class="g-card-value">{rv:,} 𝕀</div>
                                 <div class="g-card-id">{aid}</div>
                             </div>
                         </div>""", unsafe_allow_html=True)
 
-                    # ══ TITLE — v0.9.2.1 FIX ══════════════════════
-                    # cert_key stored in session_state (not cert_bytes dict).
-                    # On click: generate → store in session_state → st.rerun()
-                    # No finally block. No intermediate "None" widget state.
+                    # ══ TITLE — v0.9.2 FIX ═══════════════════════
+                    # Key insight: use a session_state key per asset.
+                    # TITLE button visible only when cert not cached.
+                    # Download button visible only when cert IS cached.
+                    # `finally: st.rerun()` guarantees no "stuck" states.
                     cert_key = f"cert_{aid}"
 
                     if cert_key not in st.session_state:
+                        # Show TITLE button
                         if st.button("📜 TITLE", key=f"title_{aid}"):
-                            with st.spinner("Generating certificate…"):
-                                try:
-                                    pdf_bytes = make_certificate(rn, aid, user, rv)
-                                    # Write to session_state BEFORE rerun
-                                    st.session_state[cert_key] = pdf_bytes
-                                    fresh = load_creations().copy()
-                                    fresh.loc[fresh["id"]==aid,"cert_downloaded"] = "True"
-                                    save_creations(fresh)
-                                    st.session_state["creations_df"] = load_creations()
-                                    if not st.session_state["cert_ever"]:
-                                        st.session_state["cert_ever"] = True
-                                    run_quests(df_all, user)
-                                    log_activity(user, "CERT_GEN", aid)
-                                    # Rerun only on success — no finally
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Certificate error: {e}")
+                            try:
+                                pdf_bytes = make_certificate(rn, aid, user, rv)
+                                st.session_state[cert_key] = pdf_bytes
+                                # Update CSV once (cert_downloaded flag)
+                                fresh = load_creations().copy()
+                                fresh.loc[fresh["id"]==aid,"cert_downloaded"] = "True"
+                                save_creations(fresh)
+                                st.session_state["creations_df"] = load_creations()
+                                if not st.session_state["cert_ever"]:
+                                    st.session_state["cert_ever"] = True
+                                run_quests(df_all, user)
+                                log_activity(user, "CERT_GEN", aid)
+                            except Exception as e:
+                                st.session_state[f"cert_error_{aid}"] = str(e)
+                            finally:
+                                # Always rerun — eliminates any flash state
+                                st.rerun()
                     else:
-                        # cert is ready — show only the download button
+                        # Show ONLY the download button — clean, no TITLE visible
                         safe_name = rn[:24].replace(" ","_")
                         st.download_button(
                             "⬇️ Certificate",
@@ -1275,8 +1277,14 @@ with tab_vault:
                             key=f"dl_{aid}",
                             use_container_width=True,
                         )
+                        # Show cert error if generation failed
+                        if f"cert_error_{aid}" in st.session_state:
+                            st.error(f"Error: {st.session_state[f'cert_error_{aid}']}")
+                        # Re-generate option (tiny link style)
                         if st.button("↻ New cert", key=f"regen_{aid}"):
                             del st.session_state[cert_key]
+                            if f"cert_error_{aid}" in st.session_state:
+                                del st.session_state[f"cert_error_{aid}"]
                             st.rerun()
 
                     # ══ SPLIT ═════════════════════════════════════
@@ -1344,7 +1352,7 @@ with tab_wallet:
         <div class="wallet-card">
             <div class="wallet-label">CURRENT BALANCE</div>
             <div class="wallet-amount">{total_imagix:,} 𝕀</div>
-            <div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.9.2.1</div>
+            <div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.9.2</div>
         </div>""", unsafe_allow_html=True)
 
     if not user_df.empty:
@@ -1503,6 +1511,7 @@ with tab_market:
                 with bc1:
                     if st.button(f"💰 BUY  {mp:,} 𝕀",key=f"buy_{mid}",disabled=not can_buy):
                         try:
+                            # Atomic transfer
                             new_bal = total_imagix-mp
                             st.session_state["imagix"] = new_bal
                             save_wallet(user, new_bal)
@@ -1518,6 +1527,7 @@ with tab_market:
                             st.session_state["bought_ever"]  = True
                             run_quests(load_creations(), user)
                             log_activity(user,"BUY",f"{mid} from {ms} @ {mp}")
+                            # v0.9.2: Rich buy feedback panel
                             st.session_state["buy_feedback"] = {
                                 "title": f"You acquired '{mn}'! 🎉",
                                 "details": [
@@ -1588,7 +1598,7 @@ with tab_upload:
 
 
 # ────────────────────────────────────────────────────────────────────
-# TAB: ACTIVITY
+# TAB: ACTIVITY  (v0.9.2 NEW)
 # ────────────────────────────────────────────────────────────────────
 with tab_activity:
     render_tutor_panel("activity")
@@ -1605,12 +1615,14 @@ with tab_activity:
             detail = str(ev.get("detail",""))
             ts_raw = str(ev.get("ts",""))
 
+            # Format timestamp nicely
             try:
                 dt     = datetime.fromisoformat(ts_raw)
                 ts_fmt = dt.strftime("%H:%M · %b %d")
             except Exception:
                 ts_fmt = ts_raw[:16]
 
+            # Lookup action metadata
             meta      = ACT_META.get(action, ("◈", "muted", action))
             act_emoji, act_color, act_label = meta
             color_val = C.get(act_color, C["muted"])
@@ -1628,8 +1640,10 @@ with tab_activity:
         st.write("")
         st.caption(f"Showing last {len(events)} events · Sorted newest first")
 
+        # Option to clear activity log
         with st.expander("⚙️ Log Options"):
             if st.button("🗑️ Clear my activity log", key="clear_log"):
+                # Only delete this user's entries
                 df_act = _read(F["activity"], ACTIVITY_COLS)
                 df_act = df_act[df_act["sovereign"] != user].copy()
                 _write(df_act.tail(500), F["activity"])
@@ -1638,13 +1652,13 @@ with tab_activity:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# SIDEBAR — GENESIS TERMINAL v0.9.2.1
+# SIDEBAR — GENESIS TERMINAL v0.9.2
 # ══════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(f"""
     <div style="text-align:center;padding:16px 0 8px;">
         <div style="font-family:'Cinzel',serif;color:{C['gold']};font-size:14px;font-weight:900;letter-spacing:3px;">◈ GENESIS TERMINAL</div>
-        <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">v0.9.2.1 · CLARITY & CONTROL</div>
+        <div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">v0.9.2 · CLARITY & CONTROL</div>
     </div>""", unsafe_allow_html=True)
     st.divider()
 
@@ -1675,6 +1689,7 @@ with st.sidebar:
 
     st.divider()
 
+    # ── SPONSOR MODE ──────────────────────────────────────────────
     st.markdown(f"""<div style="font-family:'Cinzel',serif;color:{C['muted']};font-size:9px;letter-spacing:2px;margin-bottom:6px;">PARENTAL / SPONSOR MODE</div>""",
                 unsafe_allow_html=True)
 
@@ -1723,6 +1738,7 @@ with st.sidebar:
             st.markdown(f"""<div style="font-family:'DM Mono',monospace;color:{C['teal']};font-size:9px;margin-top:8px;line-height:1.8;opacity:.8;">✦ Read-only Sponsor view<br>✦ Trade approval gates · v1.0<br>✦ Activity log · v1.0</div>""",
                         unsafe_allow_html=True)
 
+            # SECURITY: Password reset ONLY visible to non-minors
             if not is_minor:
                 st.write("")
                 with st.expander("🔑 Reset Kingdom Password"):
@@ -1745,11 +1761,11 @@ with st.sidebar:
                 </div>""", unsafe_allow_html=True)
 
     st.divider()
-    st.caption("Delphia Genesis v0.9.2.1\nWhere Imagination Becomes Sovereign\n© Rey Delphi · Kardashev VI")
+    st.caption("Delphia Genesis v0.9.2\nWhere Imagination Becomes Sovereign\n© Rey Delphi · Kardashev VI")
 
 
 # ══════════════════════════════════════════════════════════════════════
 # FOOTER
 # ══════════════════════════════════════════════════════════════════════
 st.divider()
-st.caption("⬟ Delphia Genesis v0.9.2.1 — Clarity & Control · Micro Patch  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
+st.caption("⬟ Delphia Genesis v0.9.2 — Clarity & Control  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
