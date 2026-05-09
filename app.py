@@ -1,10 +1,13 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║      DELPHIA GENESIS v0.10.1.2 — QUICK HOTFIX       ║
+║          DELPHIA GENESIS v0.10.2 — CREATOR ECONOMY PHASE 2          ║
 ║                                                                      ║
-║  Fixes: SOLD log for seller · royalty_ever detection (wallet+creations)║
-║         Quest "Royalty Sovereign" activation hardened               ║
-║         ACT_META: SOLD action added                              ║
+║  New:  🔒 Loans Tab (LTV 60%, sponsor gate, lock, default, countdown)║
+║        🔔 Notification Bell (header badge + panel)                   ║
+║        🏛  Auctions data layer (scaffold for next iteration)         ║
+║  Fix:  Activity Log seller SOLD — atomic, disk-flush, reliable       ║
+║        load_activity: fresh disk read, stable sort                   ║
+║        log_activity: temp-file atomic write                          ║
 ║                   Rey Delphi · Kardashev VI                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
@@ -12,7 +15,7 @@
 import streamlit as st
 import pandas as pd
 import os, hashlib, io, math, base64, json, random, urllib.request
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -53,12 +56,15 @@ F = {
     "users":     "genesis_users.csv",
     "market":    "genesis_market.csv",
     "activity":  "genesis_activity.csv",
+    "loans":     "genesis_loans.csv",
+    "auctions":  "genesis_auctions.csv",
     "dir":       "creations",
 }
 
 MINOR_AGE           = 18
 SPONSOR_SESSION_KEY = "sponsor_verified_session"
 DEFAULT_ROYALTY_PCT = 5   # % royalty on secondary sales
+LOAN_LTV_PCT        = 60  # Loan-to-value ratio for collateralized loans
 
 RANK_TIERS = [
     (0,        "✦ SPARK I",    "spark"),
@@ -90,20 +96,24 @@ DEMO_SHOWCASE = [
 ]
 
 ACT_META = {
-    "UPLOAD":      ("📤", "teal",   "New Creation"),
-    "CERT_GEN":    ("📜", "gold",   "Certificate"),
-    "SPLIT":       ("🔀", "purple", "Fractionalised"),
-    "LIST":        ("🌠", "purple", "Listed"),
-    "DELIST":      ("✕",  "muted",  "Delisted"),
-    "BUY":         ("💰", "green",  "Purchased"),
-    "SOLD":        ("🤝", "teal",   "Sale Made"),
-    "ROYALTY":     ("👑", "gold",   "Royalty Earned"),
-    "QUESTS_DONE": ("⚡", "gold",   "Quest Done"),
-    "LOGIN":       ("🔑", "teal",   "Login"),
-    "REGISTER":    ("🌟", "gold",   "Registered"),
-    "PWD_RESET":   ("🔑", "orange", "Password Reset"),
-    "LOCK":        ("🔒", "orange", "Asset Locked"),
-    "UNLOCK":      ("🔓", "teal",   "Asset Unlocked"),
+    "UPLOAD":       ("📤", "teal",   "New Creation"),
+    "CERT_GEN":     ("📜", "gold",   "Certificate"),
+    "SPLIT":        ("🔀", "purple", "Fractionalised"),
+    "LIST":         ("🌠", "purple", "Listed"),
+    "DELIST":       ("✕",  "muted",  "Delisted"),
+    "BUY":          ("💰", "green",  "Purchased"),
+    "SOLD":         ("🤝", "teal",   "Sale Made"),
+    "ROYALTY":      ("👑", "gold",   "Royalty Earned"),
+    "QUESTS_DONE":  ("⚡", "gold",   "Quest Done"),
+    "LOGIN":        ("🔑", "teal",   "Login"),
+    "REGISTER":     ("🌟", "gold",   "Registered"),
+    "PWD_RESET":    ("🔑", "orange", "Password Reset"),
+    "LOCK":         ("🔒", "orange", "Asset Locked"),
+    "UNLOCK":       ("🔓", "teal",   "Asset Unlocked"),
+    "LOAN_OPEN":    ("🏦", "orange", "Loan Opened"),
+    "LOAN_REPAY":   ("✅", "green",  "Loan Repaid"),
+    "LOAN_DEFAULT": ("⚠️", "danger", "Loan Defaulted"),
+    "AUCTION_LIST": ("🏛",  "purple", "Auction Listed"),
 }
 
 
@@ -125,6 +135,7 @@ TUTORS = [
             "wallet":"¡Tienes muchos IMAGIX! 💰 ¡Eres muy rico! ¡Sigue así! 🌟",
             "market":"¡Aquí puedes ver cosas de otros amigos! 👀 ¡Qué emocionante! 🎪",
             "activity":"¡Mira todo lo que has hecho! 🎉 ¡Eres muy activo! ¡Sigue así! ⭐",
+            "loans":"¡Aquí guardas tus cosas especiales! 🔒 ¡Son muy importantes! ✨",
             "default":"¡Hola! 🌟 ¡Estás en el lugar más mágico del universo! ¡Juega y crea! ✨",
         },
     },
@@ -142,6 +153,7 @@ TUTORS = [
             "wallet":"Tu Wallet es como una alcancía mágica ⚡ ¡Cada quest le mete más brillo!",
             "market":"¡El Marketplace es como una feria mágica! ⚡ ¡Fascinante!",
             "activity":"¡Tu historial de actividad es como el diario de un explorador! ⚡",
+            "loans":"¡Los Loans son como pedir prestado tu juguete favorito a cambio de otro! ⚡ ¡Muy responsable!",
             "default":"¡Bienvenido al Genesis Layer! ⚡ Es como un videojuego donde TÚ eres el héroe.",
         },
     },
@@ -159,6 +171,7 @@ TUTORS = [
             "wallet":"¡Mira ese saldo! 💰 ¡Podría ser el doble! ¡Completa las quests y BOOM!",
             "market":"¡El Marketplace es un campo de batalla económica! 🏃‍♀️ ¡Lista y conquista!",
             "activity":"¡Mira tu historial de batallas épicas! 🏃‍♀️ ¡Cada acción cuenta, Soberano!",
+            "loans":"¡Los Loans son poder real! 🏃‍♀️ ¡Colateraliza y consigue IMAGIX para tu próximo move épico!",
             "default":"¡Oye, Soberano! 🏃‍♀️ ¿Qué estás esperando? ¡Boom!",
         },
     },
@@ -176,6 +189,7 @@ TUTORS = [
             "wallet":"🔬 El IMAGIX es moneda de mérito basada en acciones reales.",
             "market":"🔬 El Marketplace simula un mercado de activos creativos. ¿Qué precio refleja el valor real?",
             "activity":"🔬 Tu Activity Log es un registro de tus decisiones como creador. ¿Qué patrón ves?",
+            "loans":"🔬 Un préstamo colateralizado usa tu activo como garantía. LTV 60% — estándar en DeFi real.",
             "default":"🔬 El Genesis Layer combina economía conductual y creatividad. Fascinante.",
         },
     },
@@ -193,6 +207,7 @@ TUTORS = [
             "wallet":"Tu IMAGIX es el score de tu soberanía creativa. 😎 Sigue sumando.",
             "market":"El Marketplace es donde los creators serios juegan. 😎 Main character move.",
             "activity":"Tu Activity Log es el receipts de tu carrera como creator. 😎 Todo queda registrado.",
+            "loans":"No cap — usar tu activo como colateral es finance level-up. 😎 LTV 60%, real talk.",
             "default":"Hey Soberano 😎 El Genesis Layer es tu canvas digital. Real talk.",
         },
     },
@@ -210,6 +225,7 @@ TUTORS = [
             "wallet":"El IMAGIX mide tu contribución. 🦅 Que crezca es señal de que tu obra tiene impacto.",
             "market":"El Marketplace es el primer mercado de tu obra. 🦅 Establece precios que reflejen tu visión.",
             "activity":"Tu historial de actividad es el pergamino de tu soberanía. 🦅 Léelo con orgullo.",
+            "loans":"Un préstamo colateralizado es palanca soberana. 🦅 Usa tu activo para crecer sin venderlo.",
             "default":"Bienvenida al Genesis Layer, Joven Soberana. 🦅 Tu imaginación tiene peso y forma.",
         },
     },
@@ -227,6 +243,7 @@ TUTORS = [
             "wallet":"👑 El IMAGIX es un proxy de tu impacto. La verdadera riqueza es crear valor que otros deseen.",
             "market":"👑 El Marketplace es donde tu visión encuentra la economía real. Actúa con estrategia.",
             "activity":"👑 Tu Activity Log es el registro de tus actos soberanos. Cada línea es historia del Genesis Layer.",
+            "loans":"👑 El préstamo colateralizado es el instrumento del soberano que no quiere vender su legado. LTV 60% — disciplina ante todo.",
             "default":"👑 Soberano — el Genesis Layer es tu plataforma de soberanía creativa. Actúa con intención.",
         },
     },
@@ -444,7 +461,7 @@ def inject_theme():
     .buy-detail-key{font-family:'DM Mono',monospace;color:#8899aa;font-size:10px;}
     .buy-detail-val{font-family:'Cinzel',serif;color:#2ECC71;font-size:10px;font-weight:700;}
 
-    /* Quest Banner — v0.10 clean */
+    /* Quest Banner */
     .quest-banner{background:linear-gradient(135deg,rgba(242,201,76,.1),rgba(157,78,221,.08));border:1px solid rgba(242,201,76,.4);border-radius:14px;padding:16px 20px;margin-bottom:16px;}
     .quest-banner-header{font-family:'Cinzel',serif;color:#F2C94C;font-size:13px;font-weight:700;margin-bottom:10px;}
     .quest-banner-total{color:#00E5C0;}
@@ -487,6 +504,24 @@ def inject_theme():
     .ledger-table td{padding:9px 14px;font-family:'DM Mono',monospace;font-size:11px;border-bottom:1px solid rgba(157,78,221,.12);}
     .ledger-cat{background:rgba(157,78,221,.1);padding:6px 14px;font-family:'Cinzel',serif;font-size:8px;color:#9D4EDD;letter-spacing:2px;text-transform:uppercase;}
 
+    /* Loan Card */
+    .loan-card{background:linear-gradient(145deg,rgba(243,156,18,.06),rgba(157,78,221,.06));border:1px solid rgba(243,156,18,.4);border-radius:14px;padding:18px 22px;margin:10px 0;}
+    .loan-card-title{font-family:'Cinzel',serif;color:#F39C12;font-size:13px;font-weight:700;letter-spacing:2px;margin-bottom:12px;}
+    .loan-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(243,156,18,.1);}
+    .loan-row:last-child{border-bottom:none;}
+    .loan-key{font-family:'DM Mono',monospace;color:#8899aa;font-size:10px;}
+    .loan-val{font-family:'Cinzel',serif;color:#F39C12;font-size:11px;font-weight:700;}
+    .loan-danger{color:#FF6B6B!important;}
+    .loan-ok{color:#2ECC71!important;}
+
+    /* Notification Bell */
+    .notif-bell{position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+    .notif-badge{position:absolute;top:-4px;right:-4px;background:#FF6B6B;color:#fff;font-family:'Cinzel',serif;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border:1px solid #05121f;}
+    .notif-item{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(157,78,221,.15);border-radius:8px;margin-bottom:4px;background:rgba(13,31,58,.8);}
+    .notif-item:last-child{border-bottom:none;}
+    .notif-msg{font-family:'DM Mono',monospace;color:#ccd6f0;font-size:10px;flex:1;line-height:1.5;}
+    .notif-time{font-family:'DM Mono',monospace;color:#8899aa;font-size:8px;white-space:nowrap;}
+
     @media(max-width:768px){.g-hero{padding:20px 16px;}.g-hero-title{font-size:18px;letter-spacing:2px;}.g-card-img{height:100px;font-size:44px;}.q-card{flex-wrap:wrap;}.q-reward{margin-right:0;}}
     </style>
     """, unsafe_allow_html=True)
@@ -501,17 +536,23 @@ CREATION_COLS = [
     "id","name","sovereign","value","emoji","file_path",
     "created_at","is_fractional","cert_downloaded","fraction_count",
     "listed_price","listed_at","lore",
-    # v0.10 NEW
     "original_creator","royalty_pct","total_royalties","is_locked","lock_reason","transfer_count",
 ]
 USER_COLS     = ["kingdom","pw_hash","dob","sponsor_kingdom","sponsor_pw_hash"]
-WALLET_COLS   = ["sovereign","imagix","total_royalties_earned"]   # v0.10: added total_royalties_earned
+WALLET_COLS   = ["sovereign","imagix","total_royalties_earned"]
 MARKET_COLS   = ["id","name","sovereign","value","emoji","listed_price","listed_at","original_creator","royalty_pct"]
 ACTIVITY_COLS = ["ts","sovereign","action","detail"]
+LOAN_COLS     = [
+    "loan_id","sovereign","asset_id","asset_name","asset_value",
+    "loan_amount","due_date","opened_at","status",
+]
+AUCTION_COLS  = [
+    "auction_id","sovereign","asset_id","asset_name","starting_price",
+    "current_bid","current_bidder","ends_at","status",
+]
 
-# Default values for new columns (used in migration)
 CREATION_DEFAULTS = {
-    "original_creator": "",    # filled on creation
+    "original_creator": "",
     "royalty_pct":      str(DEFAULT_ROYALTY_PCT),
     "total_royalties":  "0",
     "is_locked":        "False",
@@ -537,17 +578,20 @@ def _read(path: str, cols: list) -> pd.DataFrame:
     return pd.DataFrame(columns=cols)
 
 def _write(df: pd.DataFrame, path: str):
-    try: df.to_csv(path, index=False)
-    except Exception as e: st.toast(f"⚠️ Save error: {e}", icon="⚠️")
+    """Atomic write via temp file — prevents corruption on partial writes."""
+    try:
+        tmp = path + ".tmp"
+        df.to_csv(tmp, index=False)
+        os.replace(tmp, path)
+    except Exception as e:
+        st.toast(f"⚠️ Save error: {e}", icon="⚠️")
 
 def migrate_creations():
-    """Add new v0.10 columns to existing creation rows with safe defaults."""
     if not os.path.exists(F["creations"]): return
     df = _read(F["creations"], CREATION_COLS)
     changed = False
     for col, default in CREATION_DEFAULTS.items():
         if col not in df.columns or (df[col] == "").all():
-            # Fill empty original_creator with sovereign (existing creations)
             if col == "original_creator":
                 mask = df["original_creator"] == ""
                 df.loc[mask, "original_creator"] = df.loc[mask, "sovereign"]
@@ -559,7 +603,6 @@ def migrate_creations():
         _write(df, F["creations"])
 
 def migrate_wallets():
-    """Add total_royalties_earned column to existing wallet rows."""
     if not os.path.exists(F["wallets"]): return
     df = _read(F["wallets"], WALLET_COLS)
     changed = False
@@ -576,6 +619,10 @@ def load_market() -> pd.DataFrame:    return _read(F["market"],    MARKET_COLS)
 def save_market(df):  _write(df, F["market"])
 def load_users() -> pd.DataFrame:     return _read(F["users"],     USER_COLS)
 def save_users(df):   _write(df, F["users"])
+def load_loans() -> pd.DataFrame:     return _read(F["loans"],     LOAN_COLS)
+def save_loans(df):   _write(df, F["loans"])
+def load_auctions() -> pd.DataFrame:  return _read(F["auctions"],  AUCTION_COLS)
+def save_auctions(df): _write(df, F["auctions"])
 
 def load_wallet(user: str) -> int:
     df = _read(F["wallets"], WALLET_COLS)
@@ -586,7 +633,6 @@ def load_wallet(user: str) -> int:
     return 0
 
 def load_wallet_royalties(user: str) -> int:
-    """v0.10.1: robust read with empty-string guard."""
     df = _read(F["wallets"], WALLET_COLS)
     row = df[df.sovereign == user]
     if not row.empty:
@@ -627,19 +673,58 @@ def save_quests_done(user: str, done: set):
         df = pd.concat([df, pd.DataFrame([{"sovereign":user,"completed_ids":val}])], ignore_index=True)
     _write(df, F["quests"])
 
+
+# ══════════════════════════════════════════════════════════════════════
+# ACTIVITY LOG — v0.10.2 HARDENED
+# ══════════════════════════════════════════════════════════════════════
 def log_activity(sovereign: str, action: str, detail: str = ""):
-    row = {"ts": datetime.now().isoformat(), "sovereign": sovereign, "action": action, "detail": detail}
-    df  = _read(F["activity"], ACTIVITY_COLS)
-    df  = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-    _write(df.tail(500), F["activity"])
+    """
+    v0.10.2: Atomic write via temp file. Always reads fresh from disk.
+    Never relies on stale in-memory state.
+    """
+    row = {
+        "ts":       datetime.now().isoformat(timespec="milliseconds"),
+        "sovereign": sovereign,
+        "action":   action,
+        "detail":   str(detail)[:300],
+    }
+    # Always read fresh from disk — no cached state
+    df = _read(F["activity"], ACTIVITY_COLS)
+    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    # Keep last 500, sorted ascending (newest at bottom) for stable append order
+    df = df.sort_values("ts", ascending=True, na_position="last").tail(500).reset_index(drop=True)
+    _write(df, F["activity"])
+
 
 def load_activity(user: str, n: int = 20) -> list:
+    """
+    v0.10.2: Always reads fresh from disk. Sorts descending (newest first)
+    with na_position='last' to prevent NaT sort instability.
+    """
     df = _read(F["activity"], ACTIVITY_COLS)
     if df.empty: return []
-    udf = df[df.sovereign == user].copy()
+    udf = df[df["sovereign"] == user].copy()
     if udf.empty: return []
-    udf = udf.sort_values("ts", ascending=False).head(n)
+    # Sort newest-first, guard against malformed timestamps
+    udf["_ts_sort"] = pd.to_datetime(udf["ts"], errors="coerce")
+    udf = udf.sort_values("_ts_sort", ascending=False, na_position="last").head(n)
+    udf = udf.drop(columns=["_ts_sort"])
     return udf.to_dict("records")
+
+
+# ══════════════════════════════════════════════════════════════════════
+# NOTIFICATIONS
+# ══════════════════════════════════════════════════════════════════════
+def push_notification(msg: str, kind: str = "info"):
+    """Push a notification into session state queue."""
+    notifs = st.session_state.get("notifications", [])
+    notifs.append({
+        "msg":  msg,
+        "kind": kind,
+        "ts":   datetime.now().strftime("%H:%M"),
+    })
+    st.session_state["notifications"] = notifs
+
 
 def hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
@@ -703,25 +788,23 @@ def img_to_b64(path: str):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑦ CREATOR ECONOMY — Core Functions (v0.10)
+# ⑦ CREATOR ECONOMY — Core Functions (v0.10.2)
 # ══════════════════════════════════════════════════════════════════════
 
 def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
                  transaction_type: str = "MARKETPLACE") -> dict:
     """
-    v0.10.1 STABILIZED: Central sale execution with reliable royalty tracking.
-    Fixes:
-      - Atomic wallet reads (single load, no race between load+save)
-      - BUY + ROYALTY both logged unconditionally before returning
-      - total_royalties updated on cdf before save_creations
-      - Returns royalty_to / royalty_amount reliably for session flag
+    v0.10.2 HARDENED:
+    - SOLD logged FIRST (before BUY) so seller sees it even on partial failure
+    - All three logs (SOLD, BUY, ROYALTY) written unconditionally after writes
+    - Atomic wallet snapshot pattern preserved
+    - push_notification for both buyer and seller sides
     """
     result = {
         "success": False, "buyer_paid": price, "seller_received": price,
         "royalty_amount": 0, "royalty_to": "", "message": "",
     }
     try:
-        # ── Load asset ──────────────────────────────────────────
         cdf = load_creations()
         asset_rows = cdf[cdf["id"] == asset_id]
         if asset_rows.empty:
@@ -730,7 +813,6 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
 
         asset = asset_rows.iloc[0]
 
-        # ── Lock check ──────────────────────────────────────────
         if str(asset.get("is_locked","")).lower() == "true":
             result["message"] = "Asset is locked: {}".format(asset.get("lock_reason",""))
             return result
@@ -740,7 +822,6 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
         transfer_count   = safe_int(asset.get("transfer_count","0"), 0)
         old_total_roy    = safe_int(asset.get("total_royalties","0"), 0)
 
-        # ── Royalty calculation (secondary sales only) ──────────
         is_secondary   = (original_creator and original_creator != seller)
         royalty_amount = 0
         if is_secondary and royalty_pct > 0 and transaction_type == "MARKETPLACE":
@@ -748,52 +829,45 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
 
         seller_receives = price - royalty_amount
 
-        # ── Atomic wallet snapshot (read all at once, write all at once) ──
-        # Load all balances before any writes to avoid inter-call drift
+        # Atomic wallet snapshot
         buyer_current   = load_wallet(buyer)
         seller_current  = load_wallet(seller)
         creator_current = load_wallet(original_creator) if (royalty_amount > 0 and original_creator != seller) else 0
 
-        # Write buyer (debit)
         save_wallet(buyer, buyer_current - price)
-
-        # Write seller (credit minus royalty)
         save_wallet(seller, seller_current + seller_receives)
 
-        # Write creator royalty + track total_royalties_earned
         if royalty_amount > 0 and original_creator and original_creator != seller:
             save_wallet(original_creator, creator_current + royalty_amount, royalties_delta=royalty_amount)
-            # Update total_royalties on the asset row BEFORE save_creations
             cdf.loc[cdf["id"] == asset_id, "total_royalties"] = str(old_total_roy + royalty_amount)
             result["royalty_amount"] = royalty_amount
             result["royalty_to"]     = original_creator
 
-        # ── Transfer ownership ──────────────────────────────────
         cdf.loc[cdf["id"] == asset_id, "sovereign"]      = buyer
         cdf.loc[cdf["id"] == asset_id, "listed_price"]   = ""
         cdf.loc[cdf["id"] == asset_id, "listed_at"]      = ""
         cdf.loc[cdf["id"] == asset_id, "transfer_count"] = str(transfer_count + 1)
         save_creations(cdf)
 
-        # ── Remove from marketplace ─────────────────────────────
         mdf = load_market()
         save_market(mdf[mdf["id"] != asset_id].copy())
 
         result["success"]         = True
         result["seller_received"] = seller_receives
+        result["seller"]          = seller
         result["message"]         = "Sale completed."
 
-        # ── Activity log: BUY (buyer) + SOLD (seller) + ROYALTY (creator) ──
-        # All three logged unconditionally after all writes succeed
-        log_activity(
-            buyer, "BUY",
-            "{} from {} @ {:,} [{}]".format(asset_id, seller, price, transaction_type),
-        )
+        # ── Activity logs: SOLD first (seller critical), then BUY ──
+        # v0.10.2 FIX: SOLD is written FIRST so seller log is visible
+        # regardless of any subsequent exception in BUY log write.
         log_activity(
             seller, "SOLD",
             "{} to {} @ {:,} [{}]".format(asset_id, buyer, price, transaction_type),
         )
-        result["seller"] = seller
+        log_activity(
+            buyer, "BUY",
+            "{} from {} @ {:,} [{}]".format(asset_id, seller, price, transaction_type),
+        )
         if result["royalty_amount"] > 0:
             log_activity(
                 result["royalty_to"], "ROYALTY",
@@ -801,6 +875,21 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
                     result["royalty_amount"], transaction_type, asset_id
                 ),
             )
+            push_notification(
+                "👑 Royalty received: {:,} I from sale of {}".format(
+                    result["royalty_amount"], str(asset.get("name",""))[:30]
+                ),
+                kind="royalty",
+            )
+
+        # Notifications for buyer and seller
+        asset_name = str(asset.get("name",""))[:30]
+        push_notification(
+            "🤝 SOLD '{}' to {} for {:,} I — you received {:,} I".format(
+                asset_name, buyer, price, seller_receives
+            ),
+            kind="sold",
+        )
 
     except Exception as e:
         result["message"] = str(e)
@@ -809,7 +898,7 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
 
 
 def lock_asset(asset_id: str, reason: str) -> bool:
-    """Lock an asset to prevent transfer. Used as foundation for Loans/Auctions v1.0."""
+    """Lock an asset to prevent transfer. Foundation for Loans/Auctions."""
     try:
         cdf = load_creations()
         if asset_id not in cdf["id"].values: return False
@@ -830,6 +919,186 @@ def unlock_asset(asset_id: str) -> bool:
         save_creations(cdf)
         return True
     except Exception: return False
+
+
+# ══════════════════════════════════════════════════════════════════════
+# LOANS ENGINE — v0.10.2
+# ══════════════════════════════════════════════════════════════════════
+GENESIS_TREASURY = "GENESIS_TREASURY"
+LOAN_TERM_DAYS   = 30
+
+def open_loan(sovereign: str, asset_id: str, asset_name: str,
+              asset_value: int, is_minor: bool) -> dict:
+    """
+    Open a collateralized loan at LTV 60%.
+    Minors require sponsor_verified_session.
+    Returns dict with success, loan_amount, message.
+    """
+    result = {"success": False, "loan_amount": 0, "message": ""}
+
+    # Sponsor gate for minors
+    if is_minor and not st.session_state.get(SPONSOR_SESSION_KEY, False):
+        result["message"] = "Sponsor approval required for loans. Please verify your Sponsor in the sidebar."
+        return result
+
+    # Check asset is not already locked
+    cdf = load_creations()
+    rows = cdf[cdf["id"] == asset_id]
+    if rows.empty:
+        result["message"] = "Asset not found."
+        return result
+    if str(rows.iloc[0].get("is_locked","")).lower() == "true":
+        result["message"] = "Asset is already locked as collateral or is unavailable."
+        return result
+
+    # Check no existing open loan on this asset
+    loans = load_loans()
+    if not loans.empty:
+        existing = loans[(loans["asset_id"] == asset_id) & (loans["status"] == "OPEN")]
+        if not existing.empty:
+            result["message"] = "An open loan already exists for this asset."
+            return result
+
+    loan_amount = int(asset_value * LOAN_LTV_PCT / 100)
+    if loan_amount < 1:
+        result["message"] = "Asset value too low for a loan."
+        return result
+
+    due_date = (date.today() + timedelta(days=LOAN_TERM_DAYS)).isoformat()
+    loan_id  = "LOAN-" + hashlib.sha256(
+        "{}::{}::{}".format(sovereign, asset_id, datetime.now().isoformat()).encode()
+    ).hexdigest()[:8].upper()
+
+    # Lock the asset
+    if not lock_asset(asset_id, "Collateral for loan {}".format(loan_id)):
+        result["message"] = "Failed to lock asset as collateral."
+        return result
+
+    # Credit wallet
+    current_bal = load_wallet(sovereign)
+    save_wallet(sovereign, current_bal + loan_amount)
+
+    # Record loan
+    new_loan = {
+        "loan_id":     loan_id,
+        "sovereign":   sovereign,
+        "asset_id":    asset_id,
+        "asset_name":  asset_name,
+        "asset_value": str(asset_value),
+        "loan_amount": str(loan_amount),
+        "due_date":    due_date,
+        "opened_at":   date.today().isoformat(),
+        "status":      "OPEN",
+    }
+    loans = pd.concat([loans, pd.DataFrame([new_loan])], ignore_index=True)
+    save_loans(loans)
+
+    log_activity(sovereign, "LOAN_OPEN",
+                 "{} · collateral {} · {:,} I".format(loan_id, asset_id, loan_amount))
+    push_notification(
+        "🏦 Loan {} opened — {:,} I credited. Repay by {}.".format(
+            loan_id, loan_amount, due_date
+        ),
+        kind="loan",
+    )
+
+    st.session_state["imagix"] = load_wallet(sovereign)
+
+    result["success"]     = True
+    result["loan_amount"] = loan_amount
+    result["loan_id"]     = loan_id
+    result["due_date"]    = due_date
+    result["message"]     = "Loan opened successfully."
+    return result
+
+
+def repay_loan(loan_id: str, sovereign: str) -> dict:
+    """Repay an open loan and unlock the collateral."""
+    result = {"success": False, "message": ""}
+
+    loans = load_loans()
+    loan_rows = loans[(loans["loan_id"] == loan_id) & (loans["sovereign"] == sovereign)]
+    if loan_rows.empty:
+        result["message"] = "Loan not found."
+        return result
+
+    loan = loan_rows.iloc[0]
+    if str(loan["status"]) != "OPEN":
+        result["message"] = "Loan is not in OPEN status."
+        return result
+
+    loan_amount = safe_int(loan["loan_amount"])
+    current_bal = load_wallet(sovereign)
+    if current_bal < loan_amount:
+        result["message"] = "Insufficient IMAGIX to repay loan ({:,} I needed, {:,} I available).".format(
+            loan_amount, current_bal
+        )
+        return result
+
+    # Debit wallet
+    save_wallet(sovereign, current_bal - loan_amount)
+
+    # Unlock asset
+    unlock_asset(str(loan["asset_id"]))
+
+    # Update loan status
+    loans.loc[loans["loan_id"] == loan_id, "status"] = "REPAID"
+    save_loans(loans)
+
+    st.session_state["imagix"] = load_wallet(sovereign)
+    st.session_state["creations_df"] = load_creations()
+
+    log_activity(sovereign, "LOAN_REPAY",
+                 "{} · {:,} I repaid · asset unlocked".format(loan_id, loan_amount))
+    push_notification(
+        "✅ Loan {} repaid. Asset unlocked and returned to your Vault.".format(loan_id),
+        kind="loan",
+    )
+
+    result["success"] = True
+    result["message"] = "Loan repaid. Asset unlocked."
+    return result
+
+
+def process_loan_defaults(sovereign: str):
+    """
+    Check for overdue loans and default them to Genesis Treasury.
+    Called on every page load for the current user.
+    """
+    loans = load_loans()
+    if loans.empty: return
+    today = date.today().isoformat()
+    open_loans = loans[(loans["sovereign"] == sovereign) & (loans["status"] == "OPEN")]
+    if open_loans.empty: return
+
+    changed = False
+    for _, loan in open_loans.iterrows():
+        if str(loan["due_date"]) < today:
+            # Default: transfer asset to Genesis Treasury
+            cdf = load_creations()
+            aid = str(loan["asset_id"])
+            cdf.loc[cdf["id"] == aid, "sovereign"]    = GENESIS_TREASURY
+            cdf.loc[cdf["id"] == aid, "is_locked"]    = "False"
+            cdf.loc[cdf["id"] == aid, "lock_reason"]  = ""
+            cdf.loc[cdf["id"] == aid, "listed_price"] = ""
+            save_creations(cdf)
+
+            loans.loc[loans["loan_id"] == loan["loan_id"], "status"] = "DEFAULTED"
+            changed = True
+
+            log_activity(sovereign, "LOAN_DEFAULT",
+                         "{} · asset {} transferred to Genesis Treasury".format(
+                             loan["loan_id"], aid))
+            push_notification(
+                "⚠️ Loan {} DEFAULTED — asset '{}' transferred to Genesis Treasury.".format(
+                    loan["loan_id"], str(loan["asset_name"])[:30]
+                ),
+                kind="danger",
+            )
+
+    if changed:
+        save_loans(loans)
+        st.session_state["creations_df"] = load_creations()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -888,54 +1157,38 @@ def run_quests(df: pd.DataFrame, user: str) -> int:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# ⑩ QUEST BANNER — v0.10 CLEAN (Fix #2)
+# ⑩ QUEST BANNER
 # ══════════════════════════════════════════════════════════════════════
 def render_quest_banner():
-    """
-    v0.10 FIX: Clean, pure HTML string built via list join.
-    No nested f-strings. No Python string concatenation operators inside markdown.
-    No raw HTML leaks.
-    """
     banner_quests = st.session_state.get("quest_banner", [])
-    if not banner_quests:
-        return
+    if not banner_quests: return
 
     count        = len(banner_quests)
     total_reward = sum(q.get("reward", 0) for q in banner_quests)
     header_text  = "Quest Completed!" if count == 1 else "{} Quests Completed!".format(count)
 
-    # Build rows as a list, then join — avoids any f-string nesting issues
     rows = []
     for q in banner_quests:
-        icon   = q.get("icon", "")
-        title  = q.get("title", "")
-        reward = q.get("reward", 0)
         rows.append(
             '<div class="quest-banner-row">'
             '<span class="quest-banner-icon">{}</span>'
             '<span class="quest-banner-name">{}</span>'
             '<span class="quest-banner-reward">+{:,} IMAGIX</span>'
-            '</div>'.format(icon, title, reward)
+            '</div>'.format(q.get("icon",""), q.get("title",""), q.get("reward",0))
         )
-
-    rows_html = "\n".join(rows)
 
     parts = [
         '<div class="quest-banner">',
         '<div class="quest-banner-header">',
-        "&#9889; ",
-        header_text,
+        "&#9889; ", header_text,
         " &nbsp;&middot;&nbsp; ",
         '<span class="quest-banner-total">',
         "+{:,} IMAGIX earned".format(total_reward),
-        "</span>",
-        "</div>",
-        rows_html,
+        "</span></div>",
+        "\n".join(rows),
         "</div>",
     ]
-    banner_html = "".join(parts)
-
-    st.markdown(banner_html, unsafe_allow_html=True)
+    st.markdown("".join(parts), unsafe_allow_html=True)
 
     if st.button("✕ Dismiss", key="dismiss_banner"):
         st.session_state["quest_banner"] = []
@@ -974,6 +1227,7 @@ def get_tutor_message(tutor: dict, context_tab: str, user: str, df: pd.DataFrame
         "wallet":   "El usuario ve su Wallet con {:,} IMAGIX.".format(imagix),
         "market":   "El usuario explora el Marketplace.",
         "activity": "El usuario ve su historial de actividad en Delphia Genesis.",
+        "loans":    "El usuario esta explorando el sistema de Loans colateralizados. LTV 60%.",
         "default":  "El usuario {} explora Delphia Genesis.".format(user),
     }
     prompt = (
@@ -1036,7 +1290,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold",26)
     c.drawCentredString(W/2,H-64,"DELPHIA GENESIS")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica",9.5)
-    c.drawCentredString(W/2,H-88,"  CERTIFICATE OF IMAGINATION  *  GENESIS LAYER v0.10  ")
+    c.drawCentredString(W/2,H-88,"  CERTIFICATE OF IMAGINATION  *  GENESIS LAYER v0.10.2  ")
 
     star_cy = H-192
     def draw_star(cx,cy,ro,ri,pts=5):
@@ -1099,7 +1353,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold",11)
     c.drawCentredString(W/2,sig_y,"REY DELPHI  *  REINO DE DELPHIA  *  KARDASHEV VI")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica",7)
-    c.drawCentredString(W/2,28,"Delphia Genesis v0.10.1  *  Where Imagination Becomes Sovereign  *  delphia.genesis")
+    c.drawCentredString(W/2,28,"Delphia Genesis v0.10.2  *  Where Imagination Becomes Sovereign  *  delphia.genesis")
     c.save()
     return buf.getvalue()
 
@@ -1119,11 +1373,12 @@ _SS = {
     "parent_mode": False, "sponsor_viewed_qs": False, "deep_q_open": None,
     "quest_banner": [],
     "buy_feedback": None,
+    "notifications": [],
+    "notif_panel_open": False,
 }
 for k, v in _SS.items():
     if k not in st.session_state: st.session_state[k] = v
 
-# Run migrations once per session
 if "migrations_done" not in st.session_state:
     migrate_creations()
     migrate_wallets()
@@ -1137,7 +1392,7 @@ if not st.session_state["authenticated"]:
     st.markdown(
         '<div class="g-hero" style="margin-top:40px;padding:48px 40px;">'
         '<div class="g-hero-title">&#11039; DELPHIA GENESIS &#11039;</div>'
-        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10.1.2</div>'
+        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10.2</div>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1170,6 +1425,7 @@ if not st.session_state["authenticated"]:
                             "sponsor_viewed_qs": False,
                             "split_open": {},
                             "quest_banner": [], "buy_feedback": None,
+                            "notifications": [],
                         })
                         urow = get_user_row(u)
                         if urow and str(urow.get("sponsor_kingdom","")).strip() not in ("","nan"):
@@ -1210,6 +1466,7 @@ if not st.session_state["authenticated"]:
                             "quest_completed": set(), "imagix": 0,
                             "has_sponsor": bool(str(st.session_state.get("sp_k","")).strip()),
                             "quest_banner": [], "buy_feedback": None,
+                            "notifications": [],
                         })
                         ensure_dirs(u)
                         st.success("✦ Kingdom forged! Welcome to the Genesis Layer.")
@@ -1240,35 +1497,31 @@ age           = calc_age(dob)
 is_minor      = age < MINOR_AGE
 active_tutors = get_active_tutors(age)
 
+# Process loan defaults on every page load
+process_loan_defaults(user)
+
 run_quests(df_all, user)
 
-total_imagix   = st.session_state["imagix"]
+total_imagix    = st.session_state["imagix"]
 total_royalties = load_wallet_royalties(user)
-rank           = get_rank(total_imagix)
-n_done         = len(st.session_state["quest_completed"])
+rank            = get_rank(total_imagix)
+n_done          = len(st.session_state["quest_completed"])
 
-# v0.10.1.2 FIX: Robust royalty_ever detection on every page load.
-# Checks BOTH wallet total AND any creation with total_royalties > 0.
-# Triggers run_quests immediately if newly detected.
+# v0.10.1.2 FIX carried forward: Robust royalty_ever detection
 _disk_royalties = load_wallet_royalties(user)
-total_royalties = _disk_royalties  # always fresh from disk
+total_royalties = _disk_royalties
 
 def _check_royalty_ever_from_disk(u: str) -> bool:
-    """Returns True if user has ever received a royalty — wallet OR creation record."""
-    if load_wallet_royalties(u) > 0:
-        return True
+    if load_wallet_royalties(u) > 0: return True
     try:
         cdf_r = load_creations()
-        if cdf_r.empty or "original_creator" not in cdf_r.columns:
-            return False
+        if cdf_r.empty or "original_creator" not in cdf_r.columns: return False
         user_creates = cdf_r[cdf_r["original_creator"] == u]
-        if user_creates.empty:
-            return False
+        if user_creates.empty: return False
         return bool(
             pd.to_numeric(user_creates["total_royalties"], errors="coerce").fillna(0).gt(0).any()
         )
-    except Exception:
-        return False
+    except Exception: return False
 
 if not st.session_state.get("royalty_ever"):
     if _check_royalty_ever_from_disk(user):
@@ -1276,8 +1529,12 @@ if not st.session_state.get("royalty_ever"):
         run_quests(df_all, user)
 
 
-# ── HEADER ─────────────────────────────────────────────────────────
-h1, h2, h3, h4, h5 = st.columns([4,1,1,1,1])
+# ══════════════════════════════════════════════════════════════════════
+# HEADER — v0.10.2: Notification Bell added
+# ══════════════════════════════════════════════════════════════════════
+notif_count = len(st.session_state.get("notifications", []))
+
+h1, h2, h3, h4, h5, h6 = st.columns([3.5, 1, 1, 1, 0.5, 0.8])
 h1.markdown(
     '<div style="padding-top:8px;">'
     '<span style="font-family:Cinzel,serif;font-size:17px;color:#F2C94C;font-weight:700;">🌟 {}</span>'
@@ -1289,10 +1546,63 @@ h1.markdown(
 h2.metric("IMAGIX",    "{:,} I".format(total_imagix))
 h3.metric("CREATIONS", len(user_df))
 h4.metric("QUESTS",    "{}/{}".format(n_done, len(QUESTS)))
-if h5.button("✦ LOGOUT"):
+
+# Notification Bell
+with h5:
+    st.write("")
+    bell_label = "🔔" if notif_count == 0 else "🔔 {}".format(notif_count)
+    if st.button(bell_label, key="notif_bell_btn", help="Notifications"):
+        st.session_state["notif_panel_open"] = not st.session_state.get("notif_panel_open", False)
+
+if h6.button("✦ LOGOUT", key="logout_btn"):
     for k in list(_SS.keys()):
         if k in st.session_state: del st.session_state[k]
     st.rerun()
+
+# Notification panel
+if st.session_state.get("notif_panel_open", False):
+    notifs = st.session_state.get("notifications", [])
+    with st.container():
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#0d1f3a,#112B4D);border:1px solid rgba(0,229,192,.4);'
+            'border-radius:14px;padding:16px 20px;margin-bottom:12px;">'
+            '<div style="font-family:Cinzel,serif;color:#00E5C0;font-size:11px;font-weight:700;'
+            'letter-spacing:2px;margin-bottom:10px;">🔔 NOTIFICATIONS</div>',
+            unsafe_allow_html=True,
+        )
+        if not notifs:
+            st.markdown(
+                '<div style="font-family:DM Mono,monospace;color:#8899aa;font-size:11px;">No notifications yet.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            kind_colors = {
+                "sold":    "#00E5C0",
+                "royalty": "#F2C94C",
+                "loan":    "#F39C12",
+                "danger":  "#FF6B6B",
+                "info":    "#9D4EDD",
+            }
+            for i, n in enumerate(reversed(notifs[-10:])):
+                col = kind_colors.get(n.get("kind","info"), "#9D4EDD")
+                st.markdown(
+                    '<div class="notif-item">'
+                    '<div class="notif-msg" style="border-left:3px solid {};padding-left:8px;">{}</div>'
+                    '<div class="notif-time">{}</div>'
+                    '</div>'.format(col, n.get("msg",""), n.get("ts","")),
+                    unsafe_allow_html=True,
+                )
+        st.markdown('</div>', unsafe_allow_html=True)
+        nc1, nc2 = st.columns([1,1])
+        with nc1:
+            if st.button("✕ Close", key="notif_close"):
+                st.session_state["notif_panel_open"] = False
+                st.rerun()
+        with nc2:
+            if notifs and st.button("🗑 Clear All", key="notif_clear"):
+                st.session_state["notifications"] = []
+                st.session_state["notif_panel_open"] = False
+                st.rerun()
 
 pb, _ = st.columns([3,1])
 with pb:
@@ -1304,10 +1614,10 @@ with pb:
 
 st.divider()
 
-# ── QUEST BANNER ────────────────────────────────────────────────────
+# Quest Banner
 render_quest_banner()
 
-# ── BUY FEEDBACK PANEL ──────────────────────────────────────────────
+# Buy Feedback Panel
 if st.session_state.get("buy_feedback"):
     bf = st.session_state["buy_feedback"]
     details_html = ""
@@ -1375,7 +1685,7 @@ def render_tutor_panel(context_tab: str):
         if t and msg_key in st.session_state:
             st.markdown(
                 '<div class="tutor-chat">'
-                '<div class="tutor-name" style="color:{};">{} {}</div>'
+                '<div class="tutor-name" style="color:{};"> {} {}</div>'
                 '<div class="tutor-msg">{}</div>'
                 '</div>'.format(t["color"], t["emoji"], t["name"], st.session_state[msg_key]),
                 unsafe_allow_html=True,
@@ -1404,7 +1714,7 @@ def render_tutor_panel(context_tab: str):
             if ans_key in st.session_state:
                 st.markdown(
                     '<div class="tutor-chat">'
-                    '<div class="tutor-name" style="color:{};">{} {}</div>'
+                    '<div class="tutor-name" style="color:{};"> {} {}</div>'
                     '<div class="tutor-msg">{}</div>'
                     '</div>'.format(
                         dq_tutor["color"], dq_tutor["emoji"],
@@ -1417,16 +1727,16 @@ def render_tutor_panel(context_tab: str):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# TABS
+# TABS — v0.10.2: added 🔒 LOANS
 # ══════════════════════════════════════════════════════════════════════
-tab_vault, tab_wallet, tab_quests, tab_market, tab_upload, tab_activity = st.tabs([
-    "🌌 MY VAULT", "💎 WALLET", "⚔️ QUESTS", "🌠 MARKETPLACE", "🌱 UPLOAD", "📜 ACTIVITY",
+tab_vault, tab_wallet, tab_quests, tab_market, tab_upload, tab_activity, tab_loans = st.tabs([
+    "🌌 MY VAULT", "💎 WALLET", "⚔️ QUESTS", "🌠 MARKETPLACE",
+    "🌱 UPLOAD", "📜 ACTIVITY", "🔒 LOANS",
 ])
 
 
 # ────────────────────────────────────────────────────────────────────
 # TAB: VAULT
-# v0.10 FIX #1: TITLE button — no finally, no flash, atomic state write
 # ────────────────────────────────────────────────────────────────────
 with tab_vault:
     render_tutor_panel("vault")
@@ -1536,27 +1846,21 @@ with tab_vault:
                             unsafe_allow_html=True,
                         )
 
-                    # Royalty info (creator context)
                     if orig_cr and orig_cr != user:
                         st.caption("Creator: {} · {}% royalty".format(orig_cr, r_pct))
                     elif orig_cr == user and tot_roy > 0:
                         st.caption("Royalties earned: {:,} I".format(tot_roy))
 
-                    # ══ TITLE — v0.10.1 FINAL FIX ═════════════════
-                    # Uses st.empty() placeholder to atomically swap
-                    # TITLE button → spinner → download, eliminating
-                    # Streamlit's optimistic re-render flash entirely.
+                    # TITLE button
                     cert_key     = "cert_{}".format(aid)
                     cert_gen_key = "cert_generating_{}".format(aid)
 
                     if cert_key not in st.session_state:
                         cert_slot = st.empty()
                         if not st.session_state.get(cert_gen_key, False):
-                            # Show TITLE button inside placeholder
                             with cert_slot:
                                 clicked = st.button("📜 TITLE", key="title_{}".format(aid))
                             if clicked:
-                                # Mark generating — hides button on next frame
                                 st.session_state[cert_gen_key] = True
                                 with cert_slot:
                                     with st.spinner("Generating certificate…"):
@@ -1593,7 +1897,7 @@ with tab_vault:
                             del st.session_state[cert_key]
                             st.rerun()
 
-                    # ══ SPLIT ═════════════════════════════════════
+                    # SPLIT
                     split_lbl = "⅒ FRACS" if is_frac else "🔀 SPLIT"
                     if st.button(split_lbl, key="split_{}".format(aid), disabled=is_locked):
                         st.session_state["split_open"][aid] = (
@@ -1613,7 +1917,7 @@ with tab_vault:
                         fv = rv / n_f
                         st.success("**{}** → **{}** shares · **{:,.0f} I** each ✦".format(rn, n_f, fv))
 
-                    # ══ LIST / DELIST ════════════════════════════
+                    # LIST / DELIST
                     list_lbl = "🌠 DELIST" if is_listed else "🌠 LIST"
                     if st.button(list_lbl, key="list_{}".format(aid), disabled=is_locked):
                         fresh = load_creations().copy()
@@ -1648,7 +1952,7 @@ with tab_vault:
 
 
 # ────────────────────────────────────────────────────────────────────
-# TAB: WALLET (v0.10: royalties section)
+# TAB: WALLET
 # ────────────────────────────────────────────────────────────────────
 with tab_wallet:
     render_tutor_panel("wallet")
@@ -1660,7 +1964,7 @@ with tab_wallet:
             '<div class="wallet-card">'
             '<div class="wallet-label">CURRENT BALANCE</div>'
             '<div class="wallet-amount">{:,} I</div>'
-            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10.1.2</div>'
+            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10.2</div>'
             '</div>'.format(total_imagix),
             unsafe_allow_html=True,
         )
@@ -1674,21 +1978,17 @@ with tab_wallet:
         pc3.metric("ROYALTIES",      "{:,} I".format(total_royalties))
         pc4.metric("CREDIT CAPACITY","{:,} I".format(credit_est))
 
-    # ── Creator Royalties Panel (v0.10.1: always fresh from disk) ──
     st.divider()
     st.markdown("#### 👑 Creator Royalties Earned")
 
-    # v0.10.1 FIX: always read fresh from disk — never rely on stale session value
     wallet_royalties_fresh = load_wallet_royalties(user)
 
-    # All creations originally made by this user (owned or transferred away)
     all_cdf_w = load_creations()
     if not all_cdf_w.empty and "original_creator" in all_cdf_w.columns:
         creator_works = all_cdf_w[all_cdf_w["original_creator"] == user].copy()
     else:
         creator_works = pd.DataFrame()
 
-    # Creations that have generated royalties
     if not creator_works.empty:
         creator_works["_roy"] = pd.to_numeric(creator_works["total_royalties"], errors="coerce").fillna(0)
         creator_works_with_roy = creator_works[creator_works["_roy"] > 0]
@@ -1711,7 +2011,6 @@ with tab_wallet:
         if not creator_works_with_roy.empty:
             for _, crow in creator_works_with_roy.iterrows():
                 roy_amt  = safe_int(crow.get("total_royalties","0"))
-                t_count  = safe_int(crow.get("transfer_count","0"))
                 is_owned = str(crow.get("sovereign","")) == user
                 owner_note = " (still yours)" if is_owned else " (resold)"
                 rows_html += (
@@ -1721,7 +2020,6 @@ with tab_wallet:
                     '</div>'.format(str(crow.get("name",""))[:28], owner_note, roy_amt)
                 )
 
-        # Pending creations (listed, royalty_pct > 0, no royalties yet)
         pending = creator_works[
             (creator_works["_roy"] == 0) &
             (pd.to_numeric(creator_works.get("royalty_pct", pd.Series()), errors="coerce").fillna(0) > 0)
@@ -1751,7 +2049,6 @@ with tab_wallet:
             unsafe_allow_html=True,
         )
 
-    # ── Earnings Ledger ──────────────────────────────────────────
     st.divider()
     st.markdown("#### ✦ Earnings Ledger")
 
@@ -1768,7 +2065,7 @@ with tab_wallet:
             rows_html += (
                 '<tr>'
                 '<td style="color:#ccd6f0;">{} {}</td>'
-                '<td style="color:{};">{}</td>'
+                '<td style="color:{};"> {}</td>'
                 '<td style="color:{};text-align:right;font-family:Cinzel,serif;font-weight:700;">+{:,} I</td>'
                 '</tr>'
             ).format(q["icon"], q["title"], s_col, status, r_col, q["reward"])
@@ -1865,7 +2162,7 @@ with tab_quests:
 
 
 # ────────────────────────────────────────────────────────────────────
-# TAB: MARKETPLACE (v0.10: execute_sale + royalty display)
+# TAB: MARKETPLACE
 # ────────────────────────────────────────────────────────────────────
 with tab_market:
     render_tutor_panel("market")
@@ -1918,7 +2215,6 @@ with tab_market:
             can_buy  = (not is_own and total_imagix >= mp and mp > 0)
             need_more = max(0, mp - total_imagix)
 
-            # Is this a secondary sale? (original creator != seller)
             is_secondary = (orig_cr and orig_cr != ms)
             royalty_amt  = int(mp * r_pct / 100) if is_secondary and r_pct > 0 else 0
             seller_gets  = mp - royalty_amt
@@ -1927,7 +2223,6 @@ with tab_market:
                 ' · <span style="color:#00E5C0;">YOUR LISTING</span>'
                 if is_own else ""
             )
-            # v0.10.1: Rich royalty preview before BUY button
             royalty_note = ""
             if is_secondary and royalty_amt > 0:
                 royalty_note = (
@@ -1965,11 +2260,8 @@ with tab_market:
                             st.session_state["imagix"] = load_wallet(user)
                             st.session_state["creations_df"] = load_creations()
                             st.session_state["bought_ever"] = True
-                            # v0.10.1 FIX: flag royalty_ever for the original creator
-                            # regardless of whether they are the buyer or a passive recipient
                             if result["royalty_amount"] > 0 and result["royalty_to"] == user:
                                 st.session_state["royalty_ever"] = True
-                            # Also refresh from disk (passive royalty received in another session)
                             fresh_royalties = load_wallet_royalties(user)
                             if fresh_royalties > 0 and not st.session_state.get("royalty_ever"):
                                 st.session_state["royalty_ever"] = True
@@ -2030,7 +2322,7 @@ with tab_upload:
                     fp  = ""
                     if uf is not None:
                         sfn  = uf.name.encode("ascii","ignore").decode("ascii").replace(" ","_")
-                        dest = "{}/{}/{}_{}".format(F["dir"], user, aid, sfn)
+                        dest = "{}/{}/{}_{}" .format(F["dir"], user, aid, sfn)
                         with open(dest,"wb") as fh: fh.write(uf.getbuffer())
                         fp = dest
                     new_rec = {
@@ -2040,7 +2332,6 @@ with tab_upload:
                         "is_fractional": "False", "cert_downloaded": "False",
                         "fraction_count": "100", "listed_price": "", "listed_at": "",
                         "lore": lore.strip()[:280],
-                        # v0.10 creator economy fields
                         "original_creator": user,
                         "royalty_pct": str(int(r_pct_input)),
                         "total_royalties": "0",
@@ -2066,14 +2357,15 @@ with tab_upload:
 
 
 # ────────────────────────────────────────────────────────────────────
-# TAB: ACTIVITY
+# TAB: ACTIVITY — v0.10.2: always fresh from disk
 # ────────────────────────────────────────────────────────────────────
 with tab_activity:
     render_tutor_panel("activity")
     st.markdown("### 📜 ACTIVITY LOG")
     st.caption("A record of every sovereign action on the Genesis Layer.")
 
-    events = load_activity(user, n=20)
+    # v0.10.2: Always read fresh from disk — no session caching for activity
+    events = load_activity(user, n=30)
 
     if not events:
         st.info("📜 No activity recorded yet. Upload a creation or complete a quest to begin your log!")
@@ -2096,7 +2388,7 @@ with tab_activity:
                 '<div class="act-item">'
                 '<div class="act-icon">{}</div>'
                 '<div class="act-info">'
-                '<div class="act-action" style="color:{};">{}</div>'
+                '<div class="act-action" style="color:{};"> {}</div>'
                 '<div class="act-detail">{}</div>'
                 '</div>'
                 '<div class="act-time">{}</div>'
@@ -2116,18 +2408,242 @@ with tab_activity:
                 st.rerun()
 
 
+# ────────────────────────────────────────────────────────────────────
+# TAB: LOANS — v0.10.2 NEW
+# ────────────────────────────────────────────────────────────────────
+with tab_loans:
+    render_tutor_panel("loans")
+    st.markdown("### 🔒 COLLATERALIZED LOANS")
+    st.caption(
+        "Lock a creation as collateral and receive {:d}% of its value in IMAGIX immediately. "
+        "Repay within {} days or the asset transfers to Genesis Treasury.".format(
+            LOAN_LTV_PCT, LOAN_TERM_DAYS
+        )
+    )
+
+    # Sponsor gate notice for minors
+    if is_minor and not st.session_state.get(SPONSOR_SESSION_KEY, False):
+        st.warning(
+            "🛡️ **Sponsor approval required.** You must verify your Sponsor in the sidebar "
+            "before opening a loan. This protects your creations."
+        )
+
+    # ── Active Loans ──────────────────────────────────────────────
+    st.markdown("#### 🏦 Your Active Loans")
+    all_loans = load_loans()
+    my_loans  = all_loans[all_loans["sovereign"] == user].copy() if not all_loans.empty else pd.DataFrame(columns=LOAN_COLS)
+    open_loans = my_loans[my_loans["status"] == "OPEN"] if not my_loans.empty else pd.DataFrame()
+
+    if open_loans.empty:
+        st.info("No active loans. Lock a creation below to open one.")
+    else:
+        today_str = date.today().isoformat()
+        for _, loan in open_loans.iterrows():
+            loan_id     = str(loan["loan_id"])
+            asset_name  = str(loan["asset_name"])
+            loan_amount = safe_int(loan["loan_amount"])
+            due_date    = str(loan["due_date"])
+            opened_at   = str(loan["opened_at"])
+
+            # Countdown
+            try:
+                days_left = (date.fromisoformat(due_date) - date.today()).days
+            except Exception:
+                days_left = 0
+
+            is_overdue   = days_left < 0
+            countdown_cl = "loan-danger" if is_overdue or days_left <= 5 else "loan-ok"
+            countdown_tx = "OVERDUE" if is_overdue else "{} days remaining".format(days_left)
+
+            can_repay  = total_imagix >= loan_amount
+            repay_note = "" if can_repay else " (need {:,} more I)".format(loan_amount - total_imagix)
+
+            st.markdown(
+                '<div class="loan-card">'
+                '<div class="loan-card-title">🏦 {}</div>'
+                '<div class="loan-row"><span class="loan-key">Asset</span>'
+                '<span class="loan-val">{}</span></div>'
+                '<div class="loan-row"><span class="loan-key">Loan Amount</span>'
+                '<span class="loan-val">{:,} I</span></div>'
+                '<div class="loan-row"><span class="loan-key">Opened</span>'
+                '<span class="loan-val">{}</span></div>'
+                '<div class="loan-row"><span class="loan-key">Due Date</span>'
+                '<span class="loan-val">{}</span></div>'
+                '<div class="loan-row"><span class="loan-key">Status</span>'
+                '<span class="loan-val {}"> {}</span></div>'
+                '</div>'.format(
+                    loan_id, asset_name, loan_amount, opened_at,
+                    due_date, countdown_cl, countdown_tx
+                ),
+                unsafe_allow_html=True,
+            )
+
+            rp_col1, rp_col2 = st.columns([2,1])
+            with rp_col1:
+                if st.button(
+                    "✅ REPAY {:,} I{}".format(loan_amount, repay_note),
+                    key="repay_{}".format(loan_id),
+                    disabled=not can_repay,
+                ):
+                    res = repay_loan(loan_id, user)
+                    if res["success"]:
+                        st.success("✦ Loan repaid! Asset unlocked and returned to Vault.")
+                        st.session_state["creations_df"] = load_creations()
+                        st.rerun()
+                    else:
+                        st.error("Repay failed: {}".format(res["message"]))
+            with rp_col2:
+                st.caption("Balance: {:,} I".format(total_imagix))
+
+    # ── Repaid / Defaulted loans ──────────────────────────────────
+    closed_loans = my_loans[my_loans["status"].isin(["REPAID","DEFAULTED"])] if not my_loans.empty else pd.DataFrame()
+    if not closed_loans.empty:
+        with st.expander("📋 Loan History"):
+            for _, loan in closed_loans.iterrows():
+                status = str(loan["status"])
+                s_col  = "#2ECC71" if status == "REPAID" else "#FF6B6B"
+                st.markdown(
+                    '<div style="display:flex;justify-content:space-between;padding:6px 0;'
+                    'border-bottom:1px solid rgba(157,78,221,.15);">'
+                    '<span style="font-family:DM Mono,monospace;color:#8899aa;font-size:10px;">{} · {}</span>'
+                    '<span style="font-family:Cinzel,serif;font-size:10px;color:{};font-weight:700;">{}</span>'
+                    '</div>'.format(
+                        str(loan["loan_id"]), str(loan["asset_name"])[:24],
+                        s_col, status
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+    # ── Open New Loan ─────────────────────────────────────────────
+    st.divider()
+    st.markdown("#### 🔒 Open a New Loan")
+
+    # Eligible assets: owned by user, not locked, not already in open loan
+    eligible_assets = user_df[user_df["is_locked"].astype(str).str.lower() != "true"].copy() if not user_df.empty else pd.DataFrame()
+
+    # Filter out assets that already have an open loan
+    if not eligible_assets.empty and not open_loans.empty:
+        loaned_ids = set(open_loans["asset_id"].tolist())
+        eligible_assets = eligible_assets[~eligible_assets["id"].isin(loaned_ids)]
+
+    if eligible_assets.empty:
+        st.info("No eligible assets available for a loan. Upload or unlock a creation first.")
+    else:
+        eligible_assets["_v"] = pd.to_numeric(eligible_assets["value"], errors="coerce").fillna(0)
+        eligible_assets = eligible_assets.sort_values("_v", ascending=False)
+
+        # Build selectbox options
+        asset_options = [
+            "{} · {:,} I → {:,} I loan (LTV {}%)".format(
+                str(r["name"])[:30],
+                safe_int(r["value"]),
+                int(safe_int(r["value"]) * LOAN_LTV_PCT / 100),
+                LOAN_LTV_PCT,
+            )
+            for _, r in eligible_assets.iterrows()
+        ]
+        asset_ids = [str(r["id"]) for _, r in eligible_assets.iterrows()]
+
+        selected_idx = st.selectbox(
+            "Select Creation to Collateralize",
+            range(len(asset_options)),
+            format_func=lambda i: asset_options[i],
+            label_visibility="visible",
+        )
+
+        selected_row    = eligible_assets.iloc[selected_idx]
+        selected_id     = str(selected_row["id"])
+        selected_name   = str(selected_row["name"])
+        selected_value  = safe_int(selected_row["value"])
+        loan_preview    = int(selected_value * LOAN_LTV_PCT / 100)
+
+        # Preview card
+        st.markdown(
+            '<div class="loan-card">'
+            '<div class="loan-card-title">🔍 Loan Preview</div>'
+            '<div class="loan-row"><span class="loan-key">Asset</span>'
+            '<span class="loan-val">{}</span></div>'
+            '<div class="loan-row"><span class="loan-key">Asset Value</span>'
+            '<span class="loan-val">{:,} I</span></div>'
+            '<div class="loan-row"><span class="loan-key">Loan Amount (LTV {}%)</span>'
+            '<span class="loan-val">{:,} I</span></div>'
+            '<div class="loan-row"><span class="loan-key">Term</span>'
+            '<span class="loan-val">{} days</span></div>'
+            '<div class="loan-row"><span class="loan-key">Collateral Action</span>'
+            '<span class="loan-val loan-danger">Asset LOCKED until repaid or defaulted</span></div>'
+            '<div class="loan-row"><span class="loan-key">Default Consequence</span>'
+            '<span class="loan-val loan-danger">Asset transfers to Genesis Treasury</span></div>'
+            '</div>'.format(
+                selected_name, selected_value, LOAN_LTV_PCT, loan_preview, LOAN_TERM_DAYS
+            ),
+            unsafe_allow_html=True,
+        )
+
+        # Sponsor notice inside form area
+        if is_minor:
+            if st.session_state.get(SPONSOR_SESSION_KEY, False):
+                st.success("🛡️ Sponsor verified — you may open this loan.")
+            else:
+                st.error("🛡️ Sponsor must approve loans for minors. Verify in sidebar first.")
+
+        open_disabled = is_minor and not st.session_state.get(SPONSOR_SESSION_KEY, False)
+        if st.button(
+            "🔒 OPEN LOAN — Receive {:,} I NOW".format(loan_preview),
+            key="open_loan_btn",
+            disabled=open_disabled,
+            type="primary" if not open_disabled else "secondary",
+        ):
+            with st.spinner("Opening loan and locking collateral…"):
+                res = open_loan(user, selected_id, selected_name, selected_value, is_minor)
+            if res["success"]:
+                st.balloons()
+                st.success(
+                    "✦ Loan **{}** opened! **{:,} I** credited to your Wallet. "
+                    "Repay by **{}**.".format(
+                        res["loan_id"], res["loan_amount"], res["due_date"]
+                    )
+                )
+                st.session_state["creations_df"] = load_creations()
+                st.rerun()
+            else:
+                st.error("Loan failed: {}".format(res["message"]))
+
+    # ── Auctions Scaffold (preview panel) ────────────────────────
+    st.divider()
+    st.markdown("#### 🏛 Auctions — Coming Next Iteration")
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,rgba(157,78,221,.06),rgba(0,229,192,.04));'
+        'border:1px solid rgba(157,78,221,.3);border-radius:14px;padding:20px 24px;">'
+        '<div style="font-family:Cinzel,serif;color:#9D4EDD;font-size:13px;font-weight:700;margin-bottom:10px;">🏛 GENESIS AUCTIONS · v1.0</div>'
+        '<div style="font-family:DM Mono,monospace;color:#8899aa;font-size:11px;line-height:2;">'
+        '✦ Timed English-style auctions for rare creations<br>'
+        '✦ Starting price · reserve price · bid increments<br>'
+        '✦ Royalties on auction sales (same creator economy)<br>'
+        '✦ Sponsor approval gate for minors<br>'
+        '✦ Countdown timer · auto-settlement<br>'
+        '<span style="color:#F2C94C;">Data layer scaffolded — UI launching next sprint.</span>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ══════════════════════════════════════════════════════════════════════
-# SIDEBAR — GENESIS TERMINAL v0.10
+# SIDEBAR — GENESIS TERMINAL v0.10.2
 # ══════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(
         '<div style="text-align:center;padding:16px 0 8px;">'
         '<div style="font-family:Cinzel,serif;color:#F2C94C;font-size:14px;font-weight:900;letter-spacing:3px;">◈ GENESIS TERMINAL</div>'
         '<div style="font-family:DM Mono,monospace;color:#00E5C0;font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">'
-        'v0.10.1.2 · QUICK HOTFIX</div></div>',
+        'v0.10.2 · CREATOR ECONOMY PHASE 2</div></div>',
         unsafe_allow_html=True,
     )
     st.divider()
+
+    # Active loans count for sidebar
+    sidebar_open_loans = 0
+    if not all_loans.empty:
+        sidebar_open_loans = len(all_loans[(all_loans["sovereign"] == user) & (all_loans["status"] == "OPEN")])
 
     total_val_s = pd.to_numeric(user_df["value"], errors="coerce").fillna(0).sum() if not user_df.empty else 0
     for lbl, val in [
@@ -2138,6 +2654,7 @@ with st.sidebar:
         ("ROYALTIES EARNED", "{:,} I".format(total_royalties)),
         ("VAULT VALUE",      "{:,.0f} I".format(total_val_s)),
         ("CREATIONS",        str(len(user_df))),
+        ("ACTIVE LOANS",     str(sidebar_open_loans)),
         ("QUESTS DONE",      "{} / {}".format(n_done, len(QUESTS))),
         ("TUTORS",           "{} available".format(len(active_tutors))),
         ("SESSION",          datetime.now().strftime("%H:%M · %b %d")),
@@ -2202,6 +2719,7 @@ with st.sidebar:
                 ("Kingdom",      user), ("Age","{} yrs".format(age)), ("Rank",rank["name"]),
                 ("Creations",    str(len(user_df))), ("Portfolio","{:,.0f} I".format(total_val_s)),
                 ("Royalties",    "{:,} I".format(total_royalties)),
+                ("Active Loans", str(sidebar_open_loans)),
                 ("Certs Issued", str(n_cert_s)), ("Fractional",str(n_frac_s)),
                 ("Listed",       str(n_listed)), ("IMAGIX","{:,} I".format(total_imagix)),
                 ("Quests Done",  "{}/{}".format(n_done, len(QUESTS))),
@@ -2216,8 +2734,8 @@ with st.sidebar:
             st.write("")
             st.markdown(
                 '<div style="font-family:DM Mono,monospace;color:#00E5C0;font-size:9px;margin-top:8px;line-height:1.8;opacity:.8;">'
-                '✦ Read-only Sponsor view<br>✦ Trade approval gates · v1.0<br>'
-                '✦ Loan & Auction oversight · v1.0</div>',
+                '✦ Read-only Sponsor view<br>✦ Loan approval gate active<br>'
+                '✦ Auction oversight · v1.0</div>',
                 unsafe_allow_html=True,
             )
 
@@ -2246,11 +2764,11 @@ with st.sidebar:
                 )
 
     st.divider()
-    st.caption("Delphia Genesis v0.10\nCreator Economy Foundation\n© Rey Delphi · Kardashev VI")
+    st.caption("Delphia Genesis v0.10.2\nCreator Economy Phase 2\n© Rey Delphi · Kardashev VI")
 
 
 # ══════════════════════════════════════════════════════════════════════
 # FOOTER
 # ══════════════════════════════════════════════════════════════════════
 st.divider()
-st.caption("⬟ Delphia Genesis v0.10.1.2 — Quick Hotfix  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
+st.caption("⬟ Delphia Genesis v0.10.2 — Creator Economy Phase 2  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
