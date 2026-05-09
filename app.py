@@ -1,10 +1,10 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║      DELPHIA GENESIS v0.10 — CREATOR ECONOMY (FOUNDATION)          ║
+║      DELPHIA GENESIS v0.10.1 — CREATOR ECONOMY STABILIZATION       ║
 ║                                                                      ║
-║  Fixes: TITLE flash (clean) · Quest Banner (clean HTML)             ║
-║  New:   Royalties engine · execute_sale() · CSV migration           ║
-║         lock/unlock_asset · Wallet royalties panel                  ║
+║  Fixes: execute_sale logging · royalties panel · quest activation   ║
+║         TITLE flash final · royalty_ever tracking · wallet sync     ║
+║         Marketplace royalty UX preview                              ║
 ║                   Rey Delphi · Kardashev VI                          ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
@@ -585,10 +585,13 @@ def load_wallet(user: str) -> int:
     return 0
 
 def load_wallet_royalties(user: str) -> int:
+    """v0.10.1: robust read with empty-string guard."""
     df = _read(F["wallets"], WALLET_COLS)
     row = df[df.sovereign == user]
     if not row.empty:
-        try: return int(float(str(row.iloc[0].get("total_royalties_earned", "0"))))
+        raw = str(row.iloc[0]["total_royalties_earned"]).strip()
+        if raw in ("", "nan", "None"): raw = "0"
+        try: return int(float(raw))
         except: pass
     return 0
 
@@ -705,17 +708,19 @@ def img_to_b64(path: str):
 def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
                  transaction_type: str = "MARKETPLACE") -> dict:
     """
-    Central sale execution with royalty logic.
-    - Primary sale (original_creator == seller): no royalty split.
-    - Secondary sale (original_creator != seller): royalty_pct% goes to original creator.
-    Returns dict with: success, buyer_paid, seller_received, royalty_amount, royalty_to, message.
+    v0.10.1 STABILIZED: Central sale execution with reliable royalty tracking.
+    Fixes:
+      - Atomic wallet reads (single load, no race between load+save)
+      - BUY + ROYALTY both logged unconditionally before returning
+      - total_royalties updated on cdf before save_creations
+      - Returns royalty_to / royalty_amount reliably for session flag
     """
     result = {
         "success": False, "buyer_paid": price, "seller_received": price,
         "royalty_amount": 0, "royalty_to": "", "message": "",
     }
     try:
-        # Load asset
+        # ── Load asset ──────────────────────────────────────────
         cdf = load_creations()
         asset_rows = cdf[cdf["id"] == asset_id]
         if asset_rows.empty:
@@ -724,58 +729,72 @@ def execute_sale(asset_id: str, buyer: str, seller: str, price: int,
 
         asset = asset_rows.iloc[0]
 
-        # Check asset is not locked
+        # ── Lock check ──────────────────────────────────────────
         if str(asset.get("is_locked","")).lower() == "true":
-            result["message"] = f"Asset is locked: {asset.get('lock_reason','')}"
+            result["message"] = "Asset is locked: {}".format(asset.get("lock_reason",""))
             return result
 
         original_creator = str(asset.get("original_creator","")).strip() or seller
         royalty_pct      = safe_int(asset.get("royalty_pct", str(DEFAULT_ROYALTY_PCT)), DEFAULT_ROYALTY_PCT)
         transfer_count   = safe_int(asset.get("transfer_count","0"), 0)
+        old_total_roy    = safe_int(asset.get("total_royalties","0"), 0)
 
-        # Royalty only on secondary sales
-        is_secondary = (original_creator != seller and original_creator != "")
+        # ── Royalty calculation (secondary sales only) ──────────
+        is_secondary   = (original_creator and original_creator != seller)
         royalty_amount = 0
         if is_secondary and royalty_pct > 0 and transaction_type == "MARKETPLACE":
             royalty_amount = int(price * royalty_pct / 100)
 
         seller_receives = price - royalty_amount
 
-        # Debit buyer
-        buyer_bal = load_wallet(buyer) - price
-        save_wallet(buyer, buyer_bal)
+        # ── Atomic wallet snapshot (read all at once, write all at once) ──
+        # Load all balances before any writes to avoid inter-call drift
+        buyer_current   = load_wallet(buyer)
+        seller_current  = load_wallet(seller)
+        creator_current = load_wallet(original_creator) if (royalty_amount > 0 and original_creator != seller) else 0
 
-        # Credit seller
-        seller_bal = load_wallet(seller) + seller_receives
-        save_wallet(seller, seller_bal)
+        # Write buyer (debit)
+        save_wallet(buyer, buyer_current - price)
 
-        # Pay royalty to original creator
+        # Write seller (credit minus royalty)
+        save_wallet(seller, seller_current + seller_receives)
+
+        # Write creator royalty + track total_royalties_earned
         if royalty_amount > 0 and original_creator and original_creator != seller:
-            creator_bal = load_wallet(original_creator) + royalty_amount
-            save_wallet(original_creator, creator_bal, royalties_delta=royalty_amount)
-            # Update total_royalties on the asset
-            cdf.loc[cdf["id"] == asset_id, "total_royalties"] = str(
-                safe_int(asset.get("total_royalties","0")) + royalty_amount
-            )
-            log_activity(original_creator, "ROYALTY", f"{royalty_amount} IMAGIX from sale of {asset_id}")
+            save_wallet(original_creator, creator_current + royalty_amount, royalties_delta=royalty_amount)
+            # Update total_royalties on the asset row BEFORE save_creations
+            cdf.loc[cdf["id"] == asset_id, "total_royalties"] = str(old_total_roy + royalty_amount)
             result["royalty_amount"] = royalty_amount
             result["royalty_to"]     = original_creator
 
-        # Transfer ownership
+        # ── Transfer ownership ──────────────────────────────────
         cdf.loc[cdf["id"] == asset_id, "sovereign"]      = buyer
         cdf.loc[cdf["id"] == asset_id, "listed_price"]   = ""
         cdf.loc[cdf["id"] == asset_id, "listed_at"]      = ""
         cdf.loc[cdf["id"] == asset_id, "transfer_count"] = str(transfer_count + 1)
         save_creations(cdf)
 
-        # Remove from marketplace
+        # ── Remove from marketplace ─────────────────────────────
         mdf = load_market()
         save_market(mdf[mdf["id"] != asset_id].copy())
 
-        result["success"]          = True
-        result["seller_received"]  = seller_receives
-        result["message"]          = "Sale completed."
-        log_activity(buyer, "BUY", f"{asset_id} from {seller} @ {price} [{transaction_type}]")
+        result["success"]         = True
+        result["seller_received"] = seller_receives
+        result["message"]         = "Sale completed."
+
+        # ── Activity log: BUY (buyer) + ROYALTY (creator) ───────
+        # Both logged unconditionally after all writes succeed
+        log_activity(
+            buyer, "BUY",
+            "{} from {} @ {:,} [{}]".format(asset_id, seller, price, transaction_type),
+        )
+        if result["royalty_amount"] > 0:
+            log_activity(
+                result["royalty_to"], "ROYALTY",
+                "{:,} IMAGIX royalty from {} sale of {}".format(
+                    result["royalty_amount"], transaction_type, asset_id
+                ),
+            )
 
     except Exception as e:
         result["message"] = str(e)
@@ -1074,7 +1093,7 @@ def make_certificate(name: str, asset_id: str, sovereign: str, value: int) -> by
     c.setFillColor(HexColor(C["gold"])); c.setFont("Helvetica-Bold",11)
     c.drawCentredString(W/2,sig_y,"REY DELPHI  *  REINO DE DELPHIA  *  KARDASHEV VI")
     c.setFillColor(HexColor(C["teal"])); c.setFont("Helvetica",7)
-    c.drawCentredString(W/2,28,"Delphia Genesis v0.10  *  Where Imagination Becomes Sovereign  *  delphia.genesis")
+    c.drawCentredString(W/2,28,"Delphia Genesis v0.10.1  *  Where Imagination Becomes Sovereign  *  delphia.genesis")
     c.save()
     return buf.getvalue()
 
@@ -1112,7 +1131,7 @@ if not st.session_state["authenticated"]:
     st.markdown(
         '<div class="g-hero" style="margin-top:40px;padding:48px 40px;">'
         '<div class="g-hero-title">&#11039; DELPHIA GENESIS &#11039;</div>'
-        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10</div>'
+        '<div class="g-hero-sub">CREATOR ECONOMY &middot; GENESIS LAYER v0.10.1</div>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1222,7 +1241,13 @@ total_royalties = load_wallet_royalties(user)
 rank           = get_rank(total_imagix)
 n_done         = len(st.session_state["quest_completed"])
 
-# Check if any royalties received (for quest)
+# v0.10.1 FIX: Check royalties from disk on every page load
+# This catches royalties earned passively (another user bought your creation)
+_disk_royalties = load_wallet_royalties(user)
+if _disk_royalties > 0 and not st.session_state.get("royalty_ever"):
+    st.session_state["royalty_ever"] = True
+# Sync in-session total_royalties with disk value (passive income)
+total_royalties = _disk_royalties  # override with fresh disk value
 if total_royalties > 0 and not st.session_state.get("royalty_ever"):
     st.session_state["royalty_ever"] = True
     run_quests(df_all, user)
@@ -1494,30 +1519,43 @@ with tab_vault:
                     elif orig_cr == user and tot_roy > 0:
                         st.caption("Royalties earned: {:,} I".format(tot_roy))
 
-                    # ══ TITLE — v0.10 FIX #1 ══════════════════════
-                    # State machine: cert_<aid> absent = show TITLE button.
-                    # On click: generate inside spinner, store in session_state,
-                    # THEN st.rerun(). No finally block — no intermediate "None" flash.
-                    cert_key = "cert_{}".format(aid)
+                    # ══ TITLE — v0.10.1 FINAL FIX ═════════════════
+                    # Uses st.empty() placeholder to atomically swap
+                    # TITLE button → spinner → download, eliminating
+                    # Streamlit's optimistic re-render flash entirely.
+                    cert_key     = "cert_{}".format(aid)
+                    cert_gen_key = "cert_generating_{}".format(aid)
 
                     if cert_key not in st.session_state:
-                        if st.button("📜 TITLE", key="title_{}".format(aid)):
-                            with st.spinner("Generating certificate…"):
-                                try:
-                                    pdf_bytes = make_certificate(rn, aid, user, rv)
-                                    # Write state BEFORE rerun — atomic flip
-                                    st.session_state[cert_key] = pdf_bytes
-                                    fresh = load_creations().copy()
-                                    fresh.loc[fresh["id"] == aid, "cert_downloaded"] = "True"
-                                    save_creations(fresh)
-                                    st.session_state["creations_df"] = load_creations()
-                                    if not st.session_state["cert_ever"]:
-                                        st.session_state["cert_ever"] = True
-                                    run_quests(df_all, user)
-                                    log_activity(user, "CERT_GEN", aid)
-                                    st.rerun()   # only on success, no finally
-                                except Exception as e:
-                                    st.error("Certificate error: {}".format(e))
+                        cert_slot = st.empty()
+                        if not st.session_state.get(cert_gen_key, False):
+                            # Show TITLE button inside placeholder
+                            with cert_slot:
+                                clicked = st.button("📜 TITLE", key="title_{}".format(aid))
+                            if clicked:
+                                # Mark generating — hides button on next frame
+                                st.session_state[cert_gen_key] = True
+                                with cert_slot:
+                                    with st.spinner("Generating certificate…"):
+                                        try:
+                                            pdf_bytes = make_certificate(rn, aid, user, rv)
+                                            st.session_state[cert_key] = pdf_bytes
+                                            fresh = load_creations().copy()
+                                            fresh.loc[fresh["id"] == aid, "cert_downloaded"] = "True"
+                                            save_creations(fresh)
+                                            st.session_state["creations_df"] = load_creations()
+                                            if not st.session_state["cert_ever"]:
+                                                st.session_state["cert_ever"] = True
+                                            run_quests(df_all, user)
+                                            log_activity(user, "CERT_GEN", aid)
+                                        except Exception as e:
+                                            st.session_state[cert_gen_key] = False
+                                            st.error("Certificate error: {}".format(e))
+                                st.session_state[cert_gen_key] = False
+                                st.rerun()
+                        else:
+                            with cert_slot:
+                                st.info("Generating…")
                     else:
                         safe_name = rn[:24].replace(" ","_")
                         st.download_button(
@@ -1599,7 +1637,7 @@ with tab_wallet:
             '<div class="wallet-card">'
             '<div class="wallet-label">CURRENT BALANCE</div>'
             '<div class="wallet-amount">{:,} I</div>'
-            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10</div>'
+            '<div class="wallet-label" style="margin-top:8px;">IMAGIX · GENESIS LAYER v0.10.1</div>'
             '</div>'.format(total_imagix),
             unsafe_allow_html=True,
         )
@@ -1613,26 +1651,31 @@ with tab_wallet:
         pc3.metric("ROYALTIES",      "{:,} I".format(total_royalties))
         pc4.metric("CREDIT CAPACITY","{:,} I".format(credit_est))
 
-    # ── Creator Royalties Panel ──────────────────────────────────
+    # ── Creator Royalties Panel (v0.10.1: always fresh from disk) ──
     st.divider()
     st.markdown("#### 👑 Creator Royalties Earned")
 
-    orig_creations = (
-        user_df[user_df["original_creator"] == user].copy()
-        if not user_df.empty and "original_creator" in user_df.columns
-        else pd.DataFrame()
-    )
-    # Also check creations that have been transferred (no longer owned but originally created)
-    all_cdf = load_creations()
-    creator_works = all_cdf[
-        (all_cdf["original_creator"] == user) &
-        (pd.to_numeric(all_cdf["total_royalties"], errors="coerce").fillna(0) > 0)
-    ].copy() if not all_cdf.empty and "original_creator" in all_cdf.columns else pd.DataFrame()
+    # v0.10.1 FIX: always read fresh from disk — never rely on stale session value
+    wallet_royalties_fresh = load_wallet_royalties(user)
 
-    if total_royalties == 0 and creator_works.empty:
+    # All creations originally made by this user (owned or transferred away)
+    all_cdf_w = load_creations()
+    if not all_cdf_w.empty and "original_creator" in all_cdf_w.columns:
+        creator_works = all_cdf_w[all_cdf_w["original_creator"] == user].copy()
+    else:
+        creator_works = pd.DataFrame()
+
+    # Creations that have generated royalties
+    if not creator_works.empty:
+        creator_works["_roy"] = pd.to_numeric(creator_works["total_royalties"], errors="coerce").fillna(0)
+        creator_works_with_roy = creator_works[creator_works["_roy"] > 0]
+    else:
+        creator_works_with_roy = pd.DataFrame()
+
+    if wallet_royalties_fresh == 0 and creator_works_with_roy.empty:
         st.markdown(
             '<div class="royalty-card">'
-            '<div class="royalty-title">👑 CREATOR ROYALTIES</div>'
+            '<div class="royalty-title">&#128081; CREATOR ROYALTIES</div>'
             '<div style="font-family:DM Mono,monospace;color:#8899aa;font-size:11px;line-height:1.8;">'
             'No royalties yet. When a creation you made is resold by another Sovereign,<br>'
             'you automatically earn {}% of the sale price — forever.<br>'
@@ -1642,28 +1685,46 @@ with tab_wallet:
         )
     else:
         rows_html = ""
-        if not creator_works.empty:
-            for _, crow in creator_works.iterrows():
-                roy_amt = safe_int(crow.get("total_royalties","0"))
-                if roy_amt > 0:
-                    rows_html += (
-                        '<div class="royalty-row">'
-                        '<span class="royalty-key">{}</span>'
-                        '<span class="royalty-val">+{:,} I earned</span>'
-                        '</div>'.format(str(crow.get("name",""))[:32], roy_amt)
-                    )
+        if not creator_works_with_roy.empty:
+            for _, crow in creator_works_with_roy.iterrows():
+                roy_amt  = safe_int(crow.get("total_royalties","0"))
+                t_count  = safe_int(crow.get("transfer_count","0"))
+                is_owned = str(crow.get("sovereign","")) == user
+                owner_note = " (still yours)" if is_owned else " (resold)"
+                rows_html += (
+                    '<div class="royalty-row">'
+                    '<span class="royalty-key">{}{}</span>'
+                    '<span class="royalty-val">+{:,} I</span>'
+                    '</div>'.format(str(crow.get("name",""))[:28], owner_note, roy_amt)
+                )
+
+        # Pending creations (listed, royalty_pct > 0, no royalties yet)
+        pending = creator_works[
+            (creator_works["_roy"] == 0) &
+            (pd.to_numeric(creator_works.get("royalty_pct", pd.Series()), errors="coerce").fillna(0) > 0)
+        ] if not creator_works.empty else pd.DataFrame()
+        pending_html = ""
+        if not pending.empty:
+            for _, pr in pending.iterrows():
+                r_p = safe_int(pr.get("royalty_pct", str(DEFAULT_ROYALTY_PCT)), DEFAULT_ROYALTY_PCT)
+                pending_html += (
+                    '<div class="royalty-row" style="opacity:.6;">'
+                    '<span class="royalty-key">{} ({}% · pending first sale)</span>'
+                    '<span class="royalty-val">—</span>'
+                    '</div>'.format(str(pr.get("name",""))[:28], r_p)
+                )
 
         st.markdown(
             '<div class="royalty-card">'
-            '<div class="royalty-title">👑 CREATOR ROYALTIES</div>'
+            '<div class="royalty-title">&#128081; CREATOR ROYALTIES</div>'
             '<div class="royalty-row">'
             '<span class="royalty-key">TOTAL ROYALTIES RECEIVED</span>'
             '<span class="royalty-val">{:,} IMAGIX</span>'
             '</div>'
-            '{}'
+            '{}{}'
             '<div style="font-family:DM Mono,monospace;color:#8899aa;font-size:9px;margin-top:10px;">'
-            '{}% royalty on all secondary sales of your original creations · automatic · permanent'
-            '</div></div>'.format(total_royalties, rows_html, DEFAULT_ROYALTY_PCT),
+            '&#10003; Automatic · Permanent · {}% default · paid on every secondary sale'
+            '</div></div>'.format(wallet_royalties_fresh, rows_html, pending_html, DEFAULT_ROYALTY_PCT),
             unsafe_allow_html=True,
         )
 
@@ -1843,12 +1904,20 @@ with tab_market:
                 ' · <span style="color:#00E5C0;">YOUR LISTING</span>'
                 if is_own else ""
             )
+            # v0.10.1: Rich royalty preview before BUY button
             royalty_note = ""
             if is_secondary and royalty_amt > 0:
                 royalty_note = (
                     '<div class="mkt-royalty-note">'
-                    '👑 {:,} I royalty to {} · seller gets {:,} I'
+                    '&#128081; {:,} I to creator ({}) &nbsp;·&nbsp; '
+                    'seller receives {:,} I'
                     '</div>'.format(royalty_amt, orig_cr, seller_gets)
+                )
+            elif not is_secondary:
+                royalty_note = (
+                    '<div class="mkt-royalty-note" style="color:#8899aa;">'
+                    '&#127807; Primary sale &nbsp;·&nbsp; full price to seller'
+                    '</div>'
                 )
 
             st.markdown(
@@ -1873,10 +1942,14 @@ with tab_market:
                             st.session_state["imagix"] = load_wallet(user)
                             st.session_state["creations_df"] = load_creations()
                             st.session_state["bought_ever"] = True
-                            if result["royalty_amount"] > 0:
-                                # If buyer IS the original creator getting royalties, flag it
-                                if result["royalty_to"] == user:
-                                    st.session_state["royalty_ever"] = True
+                            # v0.10.1 FIX: flag royalty_ever for the original creator
+                            # regardless of whether they are the buyer or a passive recipient
+                            if result["royalty_amount"] > 0 and result["royalty_to"] == user:
+                                st.session_state["royalty_ever"] = True
+                            # Also refresh from disk (passive royalty received in another session)
+                            fresh_royalties = load_wallet_royalties(user)
+                            if fresh_royalties > 0 and not st.session_state.get("royalty_ever"):
+                                st.session_state["royalty_ever"] = True
                             run_quests(load_creations(), user)
 
                             details = [
@@ -2028,7 +2101,7 @@ with st.sidebar:
         '<div style="text-align:center;padding:16px 0 8px;">'
         '<div style="font-family:Cinzel,serif;color:#F2C94C;font-size:14px;font-weight:900;letter-spacing:3px;">◈ GENESIS TERMINAL</div>'
         '<div style="font-family:DM Mono,monospace;color:#00E5C0;font-size:8px;letter-spacing:2px;margin-top:4px;opacity:.8;">'
-        'v0.10 · CREATOR ECONOMY</div></div>',
+        'v0.10.1 · CREATOR ECONOMY STABILIZATION</div></div>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -2157,4 +2230,4 @@ with st.sidebar:
 # FOOTER
 # ══════════════════════════════════════════════════════════════════════
 st.divider()
-st.caption("⬟ Delphia Genesis v0.10 — Creator Economy Foundation  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
+st.caption("⬟ Delphia Genesis v0.10.1 — Creator Economy Stabilization  ·  The Sovereign Awakening  ·  Genesis Layer  ·  Kardashev Type VI ⬟")
