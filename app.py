@@ -359,6 +359,194 @@ def inject_theme():
 inject_theme()
 
 # ══════════════════════════════════════════════════════════════════════
+# UI RENDER HELPERS
+# ══════════════════════════════════════════════════════════════════════
+def render_tutor_panel(context_tab: str):
+    if not active_tutors: return
+
+    st.markdown(
+        '<div style="font-family:Cinzel,serif;color:#00E5C0;font-size:9px;'
+        'letter-spacing:2px;margin-bottom:8px;">✦ GENESIS TUTORS — Choose your guide</div>',
+        unsafe_allow_html=True,
+    )
+
+    t_cols = st.columns(len(active_tutors) + 1)
+
+    for i, t in enumerate(active_tutors):
+        with t_cols[i]:
+            if st.button("{} {}".format(t["emoji"], t["short"]),
+                         key="tb_{}_{}".format(t["id"], context_tab)):
+                key = "{}_{}".format(t["id"], context_tab)
+                st.session_state["tutor_open"] = (
+                    None if st.session_state.get("tutor_open") == key else key
+                )
+                if st.session_state["tutor_open"] == key:
+                    with st.spinner("{} thinking…".format(t["emoji"])):
+                        msg = get_tutor_message(t, context_tab, user, df_all)
+                    st.session_state["tmsg_{}".format(key)] = msg
+                    if not st.session_state["tutor_used"]:
+                        st.session_state["tutor_used"] = True
+                        run_quests(df_all, user)
+
+    with t_cols[-1]:
+        st.markdown('<div class="deep-q-btn">', unsafe_allow_html=True)
+        if st.button("🔮 DEEP Q", key="deepq_{}".format(context_tab),
+                     help="Ask your tutor a deep question"):
+            current = st.session_state.get("deep_q_open")
+            st.session_state["deep_q_open"] = None if current == context_tab else context_tab
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    open_key = st.session_state.get("tutor_open","") or ""
+    if open_key.endswith("_{}".format(context_tab)):
+        tid = open_key[: -(len(context_tab) + 1)]
+        t   = next((x for x in active_tutors if x["id"] == tid), None)
+        msg_key = "tmsg_{}".format(open_key)
+        if t and msg_key in st.session_state:
+            st.markdown(
+                '<div class="tutor-chat">'
+                '<div class="tutor-name" style="color:{};">{} {}</div>'
+                '<div class="tutor-msg">{}</div>'
+                '</div>'.format(t["color"], t["emoji"], t["name"], st.session_state[msg_key]),
+                unsafe_allow_html=True,
+            )
+
+    if st.session_state.get("deep_q_open") == context_tab:
+        dq_tutor = active_tutors[0]
+        with st.expander("🔮 Deep Question", expanded=True):
+            dq = st.text_input(
+                "Ask anything deep…", key="dq_input_{}".format(context_tab),
+                placeholder="Por que la creatividad tiene valor?",
+            )
+            dc1, dc2 = st.columns([1,1])
+            with dc1:
+                if st.button("✦ ASK", key="dq_ask_{}".format(context_tab)) and dq.strip():
+                    with st.spinner("{} Thinking deeply…".format(dq_tutor["emoji"])):
+                        answer = get_deep_answer(dq_tutor, dq.strip(), user, df_all)
+                    st.session_state["dq_ans_{}".format(context_tab)] = answer
+                    if not st.session_state["deep_q_used"]:
+                        st.session_state["deep_q_used"] = True
+                        run_quests(df_all, user)
+            with dc2:
+                if st.button("✕ Close", key="dq_close_{}".format(context_tab)):
+                    st.session_state["deep_q_open"] = None; st.rerun()
+            ans_key = "dq_ans_{}".format(context_tab)
+            if ans_key in st.session_state:
+                st.markdown(
+                    '<div class="tutor-chat">'
+                    '<div class="tutor-name" style="color:{};">{} {}</div>'
+                    '<div class="tutor-msg">{}</div>'
+                    '</div>'.format(
+                        dq_tutor["color"], dq_tutor["emoji"],
+                        dq_tutor["name"], st.session_state[ans_key],
+                    ),
+                    unsafe_allow_html=True,
+                )
+    st.divider()
+
+def render_notification_panel(user: str):
+    """
+    Renders the full notification panel when bell is toggled.
+    Reads from disk — persists across refreshes.
+    """
+    notifs = load_notifications(user, n=20)
+    unread = sum(1 for n in notifs if str(n.get("is_read","False")) == "False")
+
+    # Panel header
+    parts = [
+        '<div class="notif-panel">',
+        '<div class="notif-header">',
+        '<span class="notif-header-title">🔔 NOTIFICATIONS</span>',
+        '<span class="notif-header-count">{} unread · {} total</span>'.format(unread, len(notifs)),
+        '</div>',
+        '<div class="notif-list">',
+    ]
+
+    if not notifs:
+        parts.append('<div class="notif-empty">No notifications yet. Your activity will appear here.</div>')
+    else:
+        for n in notifs:
+            ntype    = str(n.get("type","SYSTEM"))
+            meta     = NOTIF_TYPES.get(ntype, ("⚡","purple","Notification"))
+            icon     = str(n.get("icon","")) or meta[0]
+            title    = str(n.get("title",""))
+            body     = str(n.get("body",""))
+            is_read  = str(n.get("is_read","False")) == "True"
+            ts_raw   = str(n.get("created_at",""))
+
+            try:
+                dt     = datetime.fromisoformat(ts_raw)
+                ts_fmt = dt.strftime("%H:%M · %b %d")
+            except Exception:
+                ts_fmt = ts_raw[:10]
+
+            color_key = meta[1]
+            color_val = C.get(color_key, C["muted"])
+            item_cls  = "notif-item" if is_read else "notif-item unread"
+
+            parts.append(
+                '<div class="{}">'
+                '<div class="notif-icon" style="color:{};">{}</div>'
+                '<div class="notif-content">'
+                '<div class="notif-title" style="color:{};">{}</div>'
+                '<div class="notif-body">{}</div>'
+                '</div>'
+                '<div class="notif-time">{}</div>'
+                '</div>'.format(item_cls, color_val, icon, color_val, title, body, ts_fmt)
+            )
+
+    parts += ['</div></div>']
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
+    # Action buttons
+    nc1, nc2, nc3 = st.columns([1.5, 1, 1])
+    with nc1:
+        if st.button("✕ Close panel", key="notif_close"):
+            st.session_state["notif_panel_open"] = False
+            st.rerun()
+    with nc2:
+        if unread > 0 and st.button("✓ Mark all read", key="notif_mark_read"):
+            mark_all_read(user)
+            st.rerun()
+    with nc3:
+        if notifs and st.button("🗑 Clear all", key="notif_clear"):
+            clear_notifications(user)
+            st.session_state["notif_panel_open"] = False
+            st.rerun()
+
+def render_quest_banner():
+    banner_quests = st.session_state.get("quest_banner", [])
+    if not banner_quests: return
+
+    count        = len(banner_quests)
+    total_reward = sum(q.get("reward", 0) for q in banner_quests)
+    header_text  = "Quest Completed!" if count == 1 else "{} Quests Completed!".format(count)
+
+    rows = []
+    for q in banner_quests:
+        rows.append(
+            '<div class="quest-banner-row">'
+            '<span class="quest-banner-icon">{}</span>'
+            '<span class="quest-banner-name">{}</span>'
+            '<span class="quest-banner-reward">+{:,} IMAGIX</span>'
+            '</div>'.format(q.get("icon",""), q.get("title",""), q.get("reward",0))
+        )
+
+    parts = [
+        '<div class="quest-banner">',
+        '<div class="quest-banner-header">&#9889; ',
+        header_text,
+        ' &nbsp;&middot;&nbsp; <span class="quest-banner-total">+{:,} IMAGIX earned</span>'.format(total_reward),
+        '</div>',
+        "\n".join(rows),
+        "</div>",
+    ]
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
+    if st.button("✕ Dismiss", key="dismiss_banner"):
+        st.session_state["quest_banner"] = []
+        st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════
 # TUTORS (completo)
 # ══════════════════════════════════════════════════════════════════════
 TUTORS = [
@@ -2903,194 +3091,6 @@ with st.sidebar:
 
     st.divider()
     st.caption("Delphia Genesis v0.10.4\nAuctions + Loans Stabilization\n© Rey Delphi · Kardashev VI")
-
-# ══════════════════════════════════════════════════════════════════════
-# UI RENDER HELPERS
-# ══════════════════════════════════════════════════════════════════════
-def render_tutor_panel(context_tab: str):
-    if not active_tutors: return
-
-    st.markdown(
-        '<div style="font-family:Cinzel,serif;color:#00E5C0;font-size:9px;'
-        'letter-spacing:2px;margin-bottom:8px;">✦ GENESIS TUTORS — Choose your guide</div>',
-        unsafe_allow_html=True,
-    )
-
-    t_cols = st.columns(len(active_tutors) + 1)
-
-    for i, t in enumerate(active_tutors):
-        with t_cols[i]:
-            if st.button("{} {}".format(t["emoji"], t["short"]),
-                         key="tb_{}_{}".format(t["id"], context_tab)):
-                key = "{}_{}".format(t["id"], context_tab)
-                st.session_state["tutor_open"] = (
-                    None if st.session_state.get("tutor_open") == key else key
-                )
-                if st.session_state["tutor_open"] == key:
-                    with st.spinner("{} thinking…".format(t["emoji"])):
-                        msg = get_tutor_message(t, context_tab, user, df_all)
-                    st.session_state["tmsg_{}".format(key)] = msg
-                    if not st.session_state["tutor_used"]:
-                        st.session_state["tutor_used"] = True
-                        run_quests(df_all, user)
-
-    with t_cols[-1]:
-        st.markdown('<div class="deep-q-btn">', unsafe_allow_html=True)
-        if st.button("🔮 DEEP Q", key="deepq_{}".format(context_tab),
-                     help="Ask your tutor a deep question"):
-            current = st.session_state.get("deep_q_open")
-            st.session_state["deep_q_open"] = None if current == context_tab else context_tab
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    open_key = st.session_state.get("tutor_open","") or ""
-    if open_key.endswith("_{}".format(context_tab)):
-        tid = open_key[: -(len(context_tab) + 1)]
-        t   = next((x for x in active_tutors if x["id"] == tid), None)
-        msg_key = "tmsg_{}".format(open_key)
-        if t and msg_key in st.session_state:
-            st.markdown(
-                '<div class="tutor-chat">'
-                '<div class="tutor-name" style="color:{};">{} {}</div>'
-                '<div class="tutor-msg">{}</div>'
-                '</div>'.format(t["color"], t["emoji"], t["name"], st.session_state[msg_key]),
-                unsafe_allow_html=True,
-            )
-
-    if st.session_state.get("deep_q_open") == context_tab:
-        dq_tutor = active_tutors[0]
-        with st.expander("🔮 Deep Question", expanded=True):
-            dq = st.text_input(
-                "Ask anything deep…", key="dq_input_{}".format(context_tab),
-                placeholder="Por que la creatividad tiene valor?",
-            )
-            dc1, dc2 = st.columns([1,1])
-            with dc1:
-                if st.button("✦ ASK", key="dq_ask_{}".format(context_tab)) and dq.strip():
-                    with st.spinner("{} Thinking deeply…".format(dq_tutor["emoji"])):
-                        answer = get_deep_answer(dq_tutor, dq.strip(), user, df_all)
-                    st.session_state["dq_ans_{}".format(context_tab)] = answer
-                    if not st.session_state["deep_q_used"]:
-                        st.session_state["deep_q_used"] = True
-                        run_quests(df_all, user)
-            with dc2:
-                if st.button("✕ Close", key="dq_close_{}".format(context_tab)):
-                    st.session_state["deep_q_open"] = None; st.rerun()
-            ans_key = "dq_ans_{}".format(context_tab)
-            if ans_key in st.session_state:
-                st.markdown(
-                    '<div class="tutor-chat">'
-                    '<div class="tutor-name" style="color:{};">{} {}</div>'
-                    '<div class="tutor-msg">{}</div>'
-                    '</div>'.format(
-                        dq_tutor["color"], dq_tutor["emoji"],
-                        dq_tutor["name"], st.session_state[ans_key],
-                    ),
-                    unsafe_allow_html=True,
-                )
-    st.divider()
-
-def render_notification_panel(user: str):
-    """
-    Renders the full notification panel when bell is toggled.
-    Reads from disk — persists across refreshes.
-    """
-    notifs = load_notifications(user, n=20)
-    unread = sum(1 for n in notifs if str(n.get("is_read","False")) == "False")
-
-    # Panel header
-    parts = [
-        '<div class="notif-panel">',
-        '<div class="notif-header">',
-        '<span class="notif-header-title">🔔 NOTIFICATIONS</span>',
-        '<span class="notif-header-count">{} unread · {} total</span>'.format(unread, len(notifs)),
-        '</div>',
-        '<div class="notif-list">',
-    ]
-
-    if not notifs:
-        parts.append('<div class="notif-empty">No notifications yet. Your activity will appear here.</div>')
-    else:
-        for n in notifs:
-            ntype    = str(n.get("type","SYSTEM"))
-            meta     = NOTIF_TYPES.get(ntype, ("⚡","purple","Notification"))
-            icon     = str(n.get("icon","")) or meta[0]
-            title    = str(n.get("title",""))
-            body     = str(n.get("body",""))
-            is_read  = str(n.get("is_read","False")) == "True"
-            ts_raw   = str(n.get("created_at",""))
-
-            try:
-                dt     = datetime.fromisoformat(ts_raw)
-                ts_fmt = dt.strftime("%H:%M · %b %d")
-            except Exception:
-                ts_fmt = ts_raw[:10]
-
-            color_key = meta[1]
-            color_val = C.get(color_key, C["muted"])
-            item_cls  = "notif-item" if is_read else "notif-item unread"
-
-            parts.append(
-                '<div class="{}">'
-                '<div class="notif-icon" style="color:{};">{}</div>'
-                '<div class="notif-content">'
-                '<div class="notif-title" style="color:{};">{}</div>'
-                '<div class="notif-body">{}</div>'
-                '</div>'
-                '<div class="notif-time">{}</div>'
-                '</div>'.format(item_cls, color_val, icon, color_val, title, body, ts_fmt)
-            )
-
-    parts += ['</div></div>']
-    st.markdown("".join(parts), unsafe_allow_html=True)
-
-    # Action buttons
-    nc1, nc2, nc3 = st.columns([1.5, 1, 1])
-    with nc1:
-        if st.button("✕ Close panel", key="notif_close"):
-            st.session_state["notif_panel_open"] = False
-            st.rerun()
-    with nc2:
-        if unread > 0 and st.button("✓ Mark all read", key="notif_mark_read"):
-            mark_all_read(user)
-            st.rerun()
-    with nc3:
-        if notifs and st.button("🗑 Clear all", key="notif_clear"):
-            clear_notifications(user)
-            st.session_state["notif_panel_open"] = False
-            st.rerun()
-
-def render_quest_banner():
-    banner_quests = st.session_state.get("quest_banner", [])
-    if not banner_quests: return
-
-    count        = len(banner_quests)
-    total_reward = sum(q.get("reward", 0) for q in banner_quests)
-    header_text  = "Quest Completed!" if count == 1 else "{} Quests Completed!".format(count)
-
-    rows = []
-    for q in banner_quests:
-        rows.append(
-            '<div class="quest-banner-row">'
-            '<span class="quest-banner-icon">{}</span>'
-            '<span class="quest-banner-name">{}</span>'
-            '<span class="quest-banner-reward">+{:,} IMAGIX</span>'
-            '</div>'.format(q.get("icon",""), q.get("title",""), q.get("reward",0))
-        )
-
-    parts = [
-        '<div class="quest-banner">',
-        '<div class="quest-banner-header">&#9889; ',
-        header_text,
-        ' &nbsp;&middot;&nbsp; <span class="quest-banner-total">+{:,} IMAGIX earned</span>'.format(total_reward),
-        '</div>',
-        "\n".join(rows),
-        "</div>",
-    ]
-    st.markdown("".join(parts), unsafe_allow_html=True)
-
-    if st.button("✕ Dismiss", key="dismiss_banner"):
-        st.session_state["quest_banner"] = []
-        st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════
 # FOOTER
