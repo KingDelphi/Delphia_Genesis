@@ -2202,8 +2202,8 @@ with tab_vault:
                     
                     # ── AUCTION ────────────────────────────
                     if st.button("🏷️ AUCTION", key=f"auc_start_{aid}", disabled=is_locked or is_listed):
-                    st.session_state["auction_modal_open"] = aid
-                    st.rerun()
+                        st.session_state["auction_modal_open"] = aid
+                        st.rerun()
 
 # Auction Modal
 if st.session_state.get("auction_modal_open"):
